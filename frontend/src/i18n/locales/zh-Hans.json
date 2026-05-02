@@ -3,6 +3,14 @@
     "home": "主页",
     "about": "关于"
   },
+  "menu": {
+    "project": "项目管理",
+    "agent": "Agent管理",
+    "workflow": "工作流管理",
+    "aui": "AUI管理",
+    "skill": "技能管理",
+    "mcp": "MCP管理"
+  },
   "languages": {
     "en": "English",
     "zh-Hans": "简体中文",
@@ -15,7 +23,12 @@
   "homepage": {
     "welcome": "欢迎使用基于Vue开发的Wails程序",
     "getting-started": "快速入门",
-    "star-me": "开始"
+    "star-me": "开始",
+    "workspace-title": "全局工作区",
+    "workspace-subtitle": "即将推出",
+    "requests": "请求",
+    "settings": "设置",
+    "toggle-sidebar": "折叠侧边栏"
   },
   "aboutpage": {
     "title": "Wails Template Vue",

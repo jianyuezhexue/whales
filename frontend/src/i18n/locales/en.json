@@ -3,6 +3,14 @@
     "home": "Home",
     "about": "About"
   },
+  "menu": {
+    "project": "Project",
+    "agent": "Agent",
+    "workflow": "Workflow",
+    "aui": "AUI",
+    "skill": "Skill",
+    "mcp": "MCP"
+  },
   "languages": {
     "en": "English",
     "zh-Hans": "简体中文",
@@ -15,7 +23,12 @@
   "homepage": {
     "welcome": "Welcome to use Wails program developed based on Vue",
     "getting-started": "Getting Started",
-    "star-me": "Github"
+    "star-me": "Github",
+    "workspace-title": "Global Workspace",
+    "workspace-subtitle": "Coming Soon",
+    "requests": "Requests",
+    "settings": "Settings",
+    "toggle-sidebar": "Toggle sidebar"
   },
   "aboutpage": {
     "title": "Wails Template Vue",

@@ -4,7 +4,7 @@ import zhHans from "./locales/zh-Hans.json";
 import en from "./locales/en.json";
 
 const i18n = createI18n({
-  locale: "en",
+  locale: "zh-Hans",
   fallbackLocale: "en",
   legacy: false,
   messages: {
