@@ -461,6 +461,8 @@ body {
 
       .header-right {
         --wails-draggable: no-drag;
+        padding-top: 10px;
+        padding-right: 5px;
         display: flex;
         align-items: center;
       }
