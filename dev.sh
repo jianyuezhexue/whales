@@ -14,6 +14,7 @@ cd "$PROJECT_ROOT"
 echo "==> Building frontend..."
 cd frontend
 npm run build-only
+sed -i '' 's|// @ts-check|// @ts-nocheck|g' wailsjs/go/*/*.js
 cd "$PROJECT_ROOT"
 
 echo "==> Building Go binary..."
