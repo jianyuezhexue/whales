@@ -252,6 +252,7 @@ body {
   font-family: "JetBrainsMono", sans-serif;
 
   .sidebar {
+    --wails-draggable: drag;
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -352,12 +353,12 @@ body {
   }
 
   .menu-list {
-    --wails-draggable: no-drag;
     flex: 1;
     overflow-y: auto;
     padding: 0 2px;
 
     .menu-item {
+      --wails-draggable: no-drag;
       display: flex;
       flex-direction: row;
       align-items: center;
@@ -404,10 +405,10 @@ body {
   }
 
   .sidebar-footer {
-    --wails-draggable: no-drag;
     padding-top: 8px;
 
     .settings-btn {
+      --wails-draggable: no-drag;
       display: flex;
       flex-direction: row;
       align-items: center;
@@ -466,6 +467,7 @@ body {
     background-color: #ffffff;
 
     .main-header {
+      --wails-draggable: drag;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -502,6 +504,7 @@ body {
     }
 
     .main-body {
+      --wails-draggable: no-drag;
       flex: 1;
       min-height: 0;
       overflow: auto;
