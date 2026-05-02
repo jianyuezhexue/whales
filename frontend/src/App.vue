@@ -77,6 +77,7 @@ body {
   overflow: hidden;
 }
 .header {
+  --wails-draggable: drag;
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
@@ -86,6 +87,7 @@ body {
   padding: 0 10px;
   background-color: rgba(171, 126, 220, 0.9);
   .nav {
+    --wails-draggable: no-drag;
     a {
       display: inline-block;
       min-width: 50px;
@@ -114,6 +116,7 @@ body {
     align-items: center;
     justify-content: space-between;
     .language {
+      --wails-draggable: no-drag;
       margin-right: 20px;
       border-radius: 2px;
       background-color: #c3c3c3;
@@ -141,6 +144,7 @@ body {
       }
     }
     .bar {
+      --wails-draggable: no-drag;
       display: flex;
       flex-direction: row;
       flex-wrap: nowrap;
