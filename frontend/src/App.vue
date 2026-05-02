@@ -15,12 +15,16 @@ const toggleSidebar = () => {
 
 // Menu items
 const menuItems = computed(() => [
+  { key: "dashboard", icon: "dashboard", route: "" },
   { key: "project", icon: "project", route: "/" },
   { key: "agent", icon: "agent", route: "/about" },
   { key: "workflow", icon: "workflow", route: "" },
+  { key: "task", icon: "task", route: "" },
+  { key: "evolution", icon: "evolution", route: "" },
   { key: "aui", icon: "aui", route: "" },
   { key: "skill", icon: "skill", route: "" },
   { key: "mcp", icon: "mcp", route: "" },
+  { key: "knowledge", icon: "knowledge", route: "" },
 ]);
 
 const activeMenu = computed(() => {
@@ -116,6 +120,20 @@ onBeforeUnmount(() => {
             <circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" />
             <path d="M18 9a9 9 0 0 1-9 9" />
           </svg>
+          <!-- 任务管理: list-checks -->
+          <svg v-else-if="item.icon === 'task'" class="menu-icon" viewBox="0 0 24 24" width="16" height="16"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 11l3 3L22 4" />
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+          </svg>
+          <!-- 自进化管理: refresh-cw / cycles -->
+          <svg v-else-if="item.icon === 'evolution'" class="menu-icon" viewBox="0 0 24 24" width="16" height="16"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+            <path d="M21 21v-5h-5" />
+          </svg>
           <!-- AUI管理: layout/dashboard -->
           <svg v-else-if="item.icon === 'aui'" class="menu-icon" viewBox="0 0 24 24" width="16" height="16"
             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -132,6 +150,18 @@ onBeforeUnmount(() => {
             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22v-5" /><path d="M9 8V2" /><path d="M15 8V2" />
             <path d="M18 8v5a6 6 0 0 1-6 6v0a6 6 0 0 1-6-6V8" />
+          </svg>
+          <!-- 控制面板: layout-dashboard -->
+          <svg v-else-if="item.icon === 'dashboard'" class="menu-icon" viewBox="0 0 24 24" width="16" height="16"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" />
+            <rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" />
+          </svg>
+          <!-- 知识体系管理: book-open -->
+          <svg v-else-if="item.icon === 'knowledge'" class="menu-icon" viewBox="0 0 24 24" width="16" height="16"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
           </svg>
           <span v-if="!collapsed" class="menu-name">{{ t("menu." + item.key) }}</span>
         </div>

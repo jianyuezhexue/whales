@@ -7,9 +7,13 @@
     "project": "Project",
     "agent": "Agent",
     "workflow": "Workflow",
+    "task": "Task",
+    "evolution": "Evolution",
     "aui": "AUI",
     "skill": "Skill",
-    "mcp": "MCP"
+    "mcp": "MCP",
+    "dashboard": "Dashboard",
+    "knowledge": "Knowledge"
   },
   "languages": {
     "en": "English",

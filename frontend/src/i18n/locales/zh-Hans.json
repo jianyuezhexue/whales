@@ -7,9 +7,13 @@
     "project": "项目管理",
     "agent": "Agent管理",
     "workflow": "工作流管理",
+    "task": "任务管理",
+    "evolution": "自进化管理",
     "aui": "AUI管理",
     "skill": "技能管理",
-    "mcp": "MCP管理"
+    "mcp": "MCP管理",
+    "dashboard": "控制面板",
+    "knowledge": "知识体系管理"
   },
   "languages": {
     "en": "English",
