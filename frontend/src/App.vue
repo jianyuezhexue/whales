@@ -15,13 +15,13 @@ const toggleSidebar = () => {
 
 // Menu items
 const menuItems = computed(() => [
-  { key: "dashboard", icon: "dashboard", route: "" },
+  // { key: "dashboard", icon: "dashboard", route: "" },
   { key: "project", icon: "project", route: "/" },
   { key: "agent", icon: "agent", route: "/about" },
   { key: "workflow", icon: "workflow", route: "" },
   { key: "task", icon: "task", route: "" },
   { key: "evolution", icon: "evolution", route: "" },
-  { key: "aui", icon: "aui", route: "" },
+  // { key: "aui", icon: "aui", route: "" },
   { key: "skill", icon: "skill", route: "" },
   { key: "mcp", icon: "mcp", route: "" },
   { key: "knowledge", icon: "knowledge", route: "" },
@@ -82,19 +82,17 @@ onBeforeUnmount(() => {
             <path d="M10 12h4" />
           </svg>
         </div>
-        <template v-if="!collapsed">
-          <div class="workspace-info">
-            <div class="workspace-title">{{ t("homepage.workspace-title") }}</div>
-            <div class="workspace-subtitle">{{ t("homepage.workspace-subtitle") }}</div>
-          </div>
-          <button class="workspace-switch" type="button">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="7 15 12 20 17 15" />
-              <polyline points="7 9 12 4 17 9" />
-            </svg>
-          </button>
-        </template>
+        <div v-if="!collapsed" class="workspace-info">
+          <div class="workspace-title">{{ t("homepage.workspace-title") }}</div>
+          <div class="workspace-subtitle">{{ t("homepage.workspace-subtitle") }}</div>
+        </div>
+        <button v-if="!collapsed" class="workspace-switch" type="button">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="7 15 12 20 17 15" />
+            <polyline points="7 9 12 4 17 9" />
+          </svg>
+        </button>
       </div>
 
       <nav class="menu-list">
@@ -175,10 +173,7 @@ onBeforeUnmount(() => {
             <path
               d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
-          <template v-if="!collapsed">
-            <span class="settings-name">{{ t("homepage.settings") }}</span>
-            <!-- <span class="settings-shortcut">⌘,</span> -->
-          </template>
+          <span v-if="!collapsed" class="settings-name">{{ t("homepage.settings") }}</span>
         </button>
       </div>
     </aside>
@@ -225,6 +220,8 @@ onBeforeUnmount(() => {
 html {
   width: 100%;
   height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
@@ -234,6 +231,8 @@ body {
   padding: 0;
   font-family: "JetBrainsMono";
   background-color: transparent;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 #app {
@@ -256,7 +255,7 @@ body {
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    width: 240px;
+    width: 200px;
     height: 100%;
     padding: 0 8px 12px;
     border-right: 1px solid #e5e5e5;
@@ -267,11 +266,10 @@ body {
 
   &.is-collapsed .sidebar {
     width: 80px;
-    padding: 0 6px 12px;
   }
 
   &.is-collapsed .workspace {
-    justify-content: center;
+    padding: 8px 16px;
   }
 
   // Reserve space for macOS traffic-light buttons
@@ -289,6 +287,7 @@ body {
     margin-bottom: 16px;
     border-radius: 8px;
     cursor: pointer;
+    transition: padding 0.2s ease;
 
     &:hover {
       background-color: #f0f0f0;
@@ -326,6 +325,9 @@ body {
         font-size: 12px;
         color: #9a9a9a;
         line-height: 1.2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
     }
 
@@ -341,6 +343,7 @@ body {
       color: #6b6b6b;
       cursor: pointer;
       border-radius: 4px;
+      flex-shrink: 0;
 
       &:hover {
         background-color: #ececec;
@@ -367,6 +370,7 @@ body {
       font-size: 13px;
       cursor: pointer;
       user-select: none;
+      transition: padding 0.2s ease;
 
       .menu-icon {
         color: #6b6b6b;
@@ -396,8 +400,7 @@ body {
   }
 
   &.is-collapsed .menu-item {
-    justify-content: center;
-    padding: 0;
+    padding: 0 22px;
   }
 
   .sidebar-footer {
@@ -414,6 +417,7 @@ body {
       padding: 0 10px;
       border: none;
       background-color: transparent;
+      transition: padding 0.2s ease;
       color: #4a4a4a;
       font-size: 13px;
       border-radius: 6px;
@@ -450,8 +454,7 @@ body {
   }
 
   &.is-collapsed .settings-btn {
-    justify-content: center;
-    padding: 0;
+    padding: 0 24px;
   }
 
   .main {
