@@ -17,11 +17,11 @@ const toggleSidebar = () => {
 const menuItems = computed(() => [
   // { key: "dashboard", icon: "dashboard", route: "" },
   { key: "project", icon: "project", route: "/" },
-  { key: "agent", icon: "agent", route: "/about" },
   { key: "workflow", icon: "workflow", route: "" },
+  { key: "agent", icon: "agent", route: "/about" },
   { key: "task", icon: "task", route: "" },
   { key: "evolution", icon: "evolution", route: "" },
-  // { key: "aui", icon: "aui", route: "" },
+  { key: "aui", icon: "aui", route: "" },
   { key: "skill", icon: "skill", route: "" },
   { key: "mcp", icon: "mcp", route: "" },
   { key: "knowledge", icon: "knowledge", route: "" },
