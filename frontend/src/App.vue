@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import logoPng from "@/assets/logo.png";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 
@@ -16,15 +17,15 @@ const toggleSidebar = () => {
 // Menu items
 const menuItems = computed(() => [
   // { key: "dashboard", icon: "dashboard", route: "" },
-  { key: "project", icon: "project", route: "/project" },
-  { key: "workflow", icon: "workflow", route: "" },
-  { key: "agent", icon: "agent", route: "/about" },
-  { key: "task", icon: "task", route: "" },
-  { key: "evolution", icon: "evolution", route: "" },
-  { key: "aui", icon: "aui", route: "" },
-  { key: "skill", icon: "skill", route: "" },
-  { key: "mcp", icon: "mcp", route: "" },
-  { key: "knowledge", icon: "knowledge", route: "" },
+  { key: "project", icon: "project", route: "/" },
+  { key: "workflow", icon: "workflow", route: "/workflow" },
+  { key: "agent", icon: "agent", route: "/agent" },
+  { key: "task", icon: "task", route: "/task" },
+  { key: "evolution", icon: "evolution", route: "/evolution" },
+  { key: "aui", icon: "aui", route: "/aui" },
+  { key: "skill", icon: "skill", route: "/skill" },
+  { key: "mcp", icon: "mcp", route: "/mcp" },
+  { key: "knowledge", icon: "knowledge", route: "/knowledge" },
 ]);
 
 const activeMenu = computed(() => {
@@ -75,24 +76,12 @@ onBeforeUnmount(() => {
 
       <div class="workspace">
         <div class="workspace-icon">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 8V21H3V8" />
-            <rect x="1" y="3" width="22" height="5" rx="1" />
-            <path d="M10 12h4" />
-          </svg>
+          <img :src="logoPng" alt="logo" width="22" height="18" class="workspace-logo" />
         </div>
         <div v-if="!collapsed" class="workspace-info">
           <div class="workspace-title">{{ t("homepage.workspace-title") }}</div>
           <div class="workspace-subtitle">{{ t("homepage.workspace-subtitle") }}</div>
         </div>
-        <button v-if="!collapsed" class="workspace-switch" type="button">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="7 15 12 20 17 15" />
-            <polyline points="7 9 12 4 17 9" />
-          </svg>
-        </button>
       </div>
 
       <nav class="menu-list">
@@ -216,6 +205,7 @@ onBeforeUnmount(() => {
 <style lang="scss">
 @import url("./assets/css/reset.css");
 @import url("./assets/css/font.css");
+@import url("./assets/css/page.css");
 
 html {
   width: 100%;
@@ -304,6 +294,11 @@ body {
       background-color: #1f1f1f;
       color: #ffffff;
       border-radius: 6px;
+      overflow: hidden;
+
+      .workspace-logo {
+        transform: scale(1.8);
+      }
     }
 
     .workspace-info {

@@ -130,7 +130,7 @@ const enterProject = (project: Project) => {
 </script>
 
 <template>
-  <div class="project-view">
+  <div class="project-view page-layout">
     <!-- Header -->
     <div class="page-header">
       <h1 class="page-title">{{ t("projectpage.title") }}</h1>
@@ -382,25 +382,7 @@ const enterProject = (project: Project) => {
 </template>
 
 <style lang="scss" scoped>
-.project-view {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
 .page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-  margin-bottom: 20px;
-
-  .page-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #1f1f1f;
-  }
-
   .header-actions {
     display: flex;
     align-items: center;
