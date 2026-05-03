@@ -16,7 +16,7 @@ const toggleSidebar = () => {
 // Menu items
 const menuItems = computed(() => [
   // { key: "dashboard", icon: "dashboard", route: "" },
-  { key: "project", icon: "project", route: "/" },
+  { key: "project", icon: "project", route: "/project" },
   { key: "workflow", icon: "workflow", route: "" },
   { key: "agent", icon: "agent", route: "/about" },
   { key: "task", icon: "task", route: "" },
