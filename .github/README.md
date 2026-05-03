@@ -1,151 +1,20 @@
-<h1 align="center">Wails Template Vue</h1>
+# Whales — AI 应用基础设施工具
 
-<p align="center">
-  <img src="./logo.png" height="280" />
-</p>
+## 初始想法
+这个项目设计之初，核心目标是，打造一个AI  应用的infra工具，方便企业中更多人包含非开发人员，更简单更快的完成agent的开发和将业务知识进行沉淀，快速实现搭建agent，沉淀业务知识，agent进化；  
+加速企业业务发展的高速阶梯，有这么几个具体目标：1，用可视化的方式，调用本地的 claude code ,codex, open claw,hermes-agent等，；2，可以指定本地文件地址创建项目，3，针对某个项目下，可以进行任务的制定，任务有标签：需求，定义问题，制定目标，拆解具体任务，  可验证性测试用例等，任务有父子层级，每个任务可指定不同code工具：比如codex；每个任务可以点击查看当前执行的cmd中具体信息；同时通过定时任务，不断的执行这些任务，也可以让 codex等工具，在执行任务的时候不断生成新的任务；4，可以制定企业内部专用的agent,定义名称，描述，挂载的skill,mcp等工具，和工作原则或工作流，可参考 
+的知识库；可以定制具体的工作流，方便企业agent使用，和不断优化工作流，工作流分两种，一种是给agent 配置和使用的，一种将agent组合进来，给项目上进行绑定的两种类型，不同目的；也会提供给agent mcp，让agent不断记录可进化的知识点，进行保存，方便后续工作人员审核，如果审核通过之后，会自动更新维护到相应的工作流中或者skill中，实现不断的自我 进化；
 
-<p align="center">
-  Wails template based on Vue ecology
-</p>
 
-<p align="center">
-  <a href="https://github.com/misitebao/wails-template-vue/blob/main/LICENSE">
-    <img alt="GitHub" src="https://img.shields.io/github/license/misitebao/wails-template-vue"/>
-  </a>
-  <a href="https://github.com/misitebao/standard-repository">
-    <img alt="GitHub" src="https://cdn.jsdelivr.net/gh/misitebao/standard-repository@main/assets/badge_flat.svg"/>
-  </a>
-  <a href="https://github.com/misitebao/wails-template-vue/releases">
-    <img alt="GitHub release (latest by date including pre-releases)" src="https://img.shields.io/github/v/release/misitebao/wails-template-vue?include_prereleases&sort=semver">
-  </a>
-  <a href="https://github.com/wailsapp/awesome-wails">
-    <img alt="Awesome-Wails" src="https://cdn.jsdelivr.net/gh/sindresorhus/awesome@main/media/badge.svg"/>
-  </a>
-  <br/>
-  <img src="https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-brightgreen?"/>
-</p>
+## 开发构建
 
-<div align="center">
-<strong>
-<samp>
+```bash
+# 装前端依赖
+cd frontend && npm install
 
-[English](README.md) · [简体中文](README.zh-Hans.md)
+# 开发模式跑起来
+wails dev
 
-</samp>
-</strong>
-</div>
-
-## Table of Contents
-
-<details>
-  <summary>Click me to Open/Close the directory listing</summary>
-
-- [Table of Contents](#table-of-contents)
-- [Introductions](#introductions)
-  - [Official Website](#official-website)
-  - [Background](#background)
-- [Graphic Demo](#graphic-demo)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Getting Started](#getting-started)
-- [Maintainer](#maintainer)
-- [Contributors](#contributors)
-- [Community Exchange](#community-exchange)
-- [Part Of Users](#part-of-users)
-- [Changelog](#changelog)
-- [Donators](#donators)
-- [Sponsors](#sponsors)
-- [Special Thanks](#special-thanks)
-- [License](#license)
-
-</details>
-
-## Introductions
-
-This project is a [Wails](https://github.com/wailsapp/wails) template based on the [Vue](https://vuejs.org/) ecosystem. You can use this project to quickly develop your application.
-
-### Background
-
-The official built-in template only provides the minimum content required to develop an application. If you want to develop an application quickly, you still need to do a lot of work yourself. Based on this, this template project provides you with out-of-the-box functions, you can Get started developing your app quickly.
-
-## Graphic Demo
-
-[![Demo Screenshot](https://cdn.jsdelivr.net/gh/misitebao/wails-template-vue@main/.github/preview.en.png "click to view gif demo")](https://cdn.jsdelivr.net/gh/misitebao/wails-template-vue@main/.github/preview.gif)
-
-## Features
-
-- Single page routing support
-- Built-in internationalization
-- Built-in bright and dark themes
-- Built-in FontAwesome icon library
-- Integrated TailwindCSS
-- Integrate TypeScript
-- Perfect for Windows, MacOS, Linux platforms
-
-## Getting Started
-
-**New Project**:
-
+# 打包
+wails build
 ```
-wails init -n <Your Appname> -t https://github.com/misitebao/wails-template-vue[@version]
-```
-
-flag description:
-
-- n - The name of the application to be created
-- t - Template name, supports built-in template names and third-party templates in the form of hyperlinks
-- @version - Specify the version of a specific Git Tag, if no version is specified, the code of the master branch will be used by default
-
-**Reference document**:
-
-The front-end part uses Vue Vue-Router and Vue-I18N:
-
-- Vue - Use vue3.x version, please refer to the official [Vue3.x Documents](https://vuejs.org/) for specific usage.
-- Vue-Router - Use Vue-Router 4.x version, please refer to the official [Vue-Router Documents](https://router.vuejs.org/) for specific usage.
-- Vue-I18N - Use Vue-I18N 9.x version, please refer to official [Vue-I18N Documents](https://vue-i18n.intlify.dev/) for specific usage.
-- TypeScript - Please refer to official [TypeScript Documents](https://www.typescriptlang.org/) for specific usage.
-- TailwindCSS - Please refer to official [TailwindCSS Documents](https://tailwindcss.com/) for specific usage.
-
-Then you can refer to the official [Wails document](https://wails.io) to start developing your application🤞.
-
-## Maintainer
-
-Thanks to the maintainers of these projects:
-
-<a href="https://github.com/misitebao">
-  <img src="https://github.com/misitebao.png" width="40" height="40" alt="misitebao" title="misitebao"/>
-</a>
-
-## Contributors
-
-Thanks to all the contributors involved in the development. [Contributors](https://github.com/misitebao/wails-template-vue/graphs/contributors)
-
-<a href="https://github.com/eighteenzheng">
-  <img src="https://github.com/eighteenzheng.png" width="40" height="40" alt="eighteenzheng" title="eighteenzheng"/>
-</a>
-<a href="https://github.com/daoif">
-  <img src="https://github.com/daoif.png" width="40" height="40" alt="daoif" title="daoif"/>
-</a>
-
-## Community Exchange
-
-- [Github Discussions](https://github.com/wailsapp/wails/discussions) - The official Github communication community of the Wails project
-- [Wails Slack](https://invite.slack.golangbridge.org/) - Wails official communication channel
-- [Twitter](https://twitter.com/wailsapp) - Wails official Twitter account
-
-Chinese Community:
-
-- <a target="_blank" href="https://qm.qq.com/cgi-bin/qm/qr?k=utlUvDwtcNG5knHBLwVdMvG39WeHh7oj&jump_from=webapi">QQ Group: 1067173054</a> - QQ Chinese Community Exchange Group
-
-## Part Of Users
-
-- [Wails API Demos](https://github.com/misitebao/wails-api-demos) - A sample program for exploring Wails API, inspired by [Electron API Demos](https://github.com/electron/electron-api-demos)
-- [Hayate](https://github.com/misitebao/hayate) - Windows application installation boot program implemented using Wails.
-
-## Changelog
-
-Check out the changelog [here](./CHANGELOG.md).
-
-## License
-
-[License MIT](./LICENSE)
