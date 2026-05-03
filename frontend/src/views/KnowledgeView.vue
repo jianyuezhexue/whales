@@ -4,7 +4,7 @@
 <template>
   <div class="knowledge-page page-layout">
     <div class="page-header">
-      <h1 class="page-title">知识体系管理</h1>
+      <h1 class="page-title">知识管理</h1>
     </div>
   </div>
 </template>

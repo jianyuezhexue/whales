@@ -144,7 +144,7 @@ onBeforeUnmount(() => {
             <rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" />
             <rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" />
           </svg>
-          <!-- 知识体系管理: book-open -->
+          <!-- 知识管理: book-open -->
           <svg v-else-if="item.icon === 'knowledge'" class="menu-icon" viewBox="0 0 24 24" width="16" height="16"
             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
