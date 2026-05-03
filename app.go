@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
 type App struct {
-	ctx context.Context
+	ctx       context.Context
 	starCount int
 }
 
@@ -61,4 +63,16 @@ func (a *App) StarMe() StarResult {
 		Message: fmt.Sprintf("hello %d", a.starCount),
 		Count:   a.starCount,
 	}
+}
+
+// SelectDirectory opens a native directory picker dialog and returns the selected path.
+// SelectDirectory 打开原生文件夹选择对话框并返回选中的路径。
+func (a *App) SelectDirectory() (string, error) {
+	path, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "选择项目文件夹",
+	})
+	if err != nil {
+		return "", err
+	}
+	return path, nil
 }

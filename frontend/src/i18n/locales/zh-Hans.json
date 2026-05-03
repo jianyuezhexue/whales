@@ -42,6 +42,26 @@
     "wails-repository": "Wails 仓库",
     "thanks": "感谢各位大佬的支持🙏！"
   },
+  "projectpage": {
+    "title": "项目管理",
+    "add": "新建项目",
+    "name": "项目名称",
+    "description": "项目描述",
+    "path": "项目地址",
+    "select-path": "选择文件夹",
+    "cancel": "取消",
+    "confirm": "确认",
+    "empty-title": "暂无项目",
+    "empty-subtitle": "点击新建按钮开始创建项目",
+    "grid-view": "网格视图",
+    "list-view": "列表视图",
+    "name-placeholder": "请输入项目名称",
+    "desc-placeholder": "请输入项目描述",
+    "path-placeholder": "请选择项目文件夹",
+    "delete": "删除",
+    "enter": "进入",
+    "edit": "编辑"
+  },
   "global": {
     "not-supported": "由于是测试版，所以暂时做不了，后续会完成它。",
     "click-link": "当前点击的链接是: "
