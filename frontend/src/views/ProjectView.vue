@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 import { useProjectStore } from "@/stores/project";
 import type { Project } from "@/stores/project";
 import { SelectDirectory } from "../../wailsjs/go/main/App";
+import ConfirmModal from "@/components/ConfirmModal.vue";
 
 const { t } = useI18n();
 const projectStore = useProjectStore();
@@ -65,8 +66,24 @@ const createProject = () => {
   showCreateModal.value = false;
 };
 
-const deleteProject = (id: string) => {
-  projectStore.deleteProject(id);
+const showDeleteModal = ref(false);
+const deletingProject = ref<Project | null>(null);
+
+const confirmDelete = (project: Project) => {
+  deletingProject.value = project;
+  showDeleteModal.value = true;
+};
+
+const onDeleteConfirm = () => {
+  if (!deletingProject.value) return;
+  projectStore.deleteProject(deletingProject.value.id);
+  showDeleteModal.value = false;
+  deletingProject.value = null;
+};
+
+const onDeleteCancel = () => {
+  showDeleteModal.value = false;
+  deletingProject.value = null;
 };
 
 const openEditModal = (project: Project) => {
@@ -97,36 +114,34 @@ const enterProject = (project: Project) => {
       <h1 class="page-title">{{ t("projectpage.title") }}</h1>
       <div class="header-actions">
         <div class="view-toggle">
-          <button
-            :class="['toggle-btn', { active: viewMode === 'grid' }]"
-            type="button"
-            :title="t('projectpage.grid-view')"
-            @click="viewMode = 'grid'"
-          >
+          <button :class="['toggle-btn', { active: viewMode === 'grid' }]" type="button"
+            :title="t('projectpage.grid-view')" @click="viewMode = 'grid'">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
             </svg>
           </button>
-          <button
-            :class="['toggle-btn', { active: viewMode === 'list' }]"
-            type="button"
-            :title="t('projectpage.list-view')"
-            @click="viewMode = 'list'"
-          >
+          <button :class="['toggle-btn', { active: viewMode === 'list' }]" type="button"
+            :title="t('projectpage.list-view')" @click="viewMode = 'list'">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round">
-              <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" />
-              <line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" />
-              <line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
             </svg>
           </button>
         </div>
         <button class="add-btn" type="button" @click="openCreateModal">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
           <span>{{ t("projectpage.add") }}</span>
         </button>
@@ -145,12 +160,9 @@ const enterProject = (project: Project) => {
 
     <!-- Grid view -->
     <div v-else-if="viewMode === 'grid'" class="project-grid">
-      <div
-        v-for="project in projectStore.projects"
-        :key="project.id"
+      <div v-for="project in projectStore.projects" :key="project.id"
         :class="['project-card', { active: projectStore.currentProjectId === project.id }]"
-        @click="enterProject(project)"
-      >
+        @click="enterProject(project)">
         <div class="card-header">
           <svg class="card-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -163,23 +175,27 @@ const enterProject = (project: Project) => {
         <div class="card-footer">
           <span class="card-date">{{ formatDate(project.createdAt) }}</span>
           <div class="card-actions">
-            <button class="card-action-btn" type="button" @click.stop="enterProject(project)" :title="t('projectpage.enter')">
+            <button class="card-action-btn" type="button" @click.stop="enterProject(project)"
+              :title="t('projectpage.enter')">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="9 18 15 12 9 6" />
               </svg>
             </button>
-            <button class="card-action-btn" type="button" @click.stop="openEditModal(project)" :title="t('projectpage.edit')">
+            <button class="card-action-btn" type="button" @click.stop="openEditModal(project)"
+              :title="t('projectpage.edit')">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
             </button>
-            <button class="card-action-btn card-delete" type="button" :title="t('projectpage.delete')" @click.stop="deleteProject(project.id)">
+            <button class="card-action-btn card-delete" type="button" :title="t('projectpage.delete')"
+              @click.stop="confirmDelete(project)">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
               </svg>
             </button>
           </div>
@@ -195,12 +211,8 @@ const enterProject = (project: Project) => {
         <span class="col-path">{{ t("projectpage.path") }}</span>
         <span class="col-action"></span>
       </div>
-      <div
-        v-for="project in projectStore.projects"
-        :key="project.id"
-        :class="['list-row', { active: projectStore.currentProjectId === project.id }]"
-        @click="enterProject(project)"
-      >
+      <div v-for="project in projectStore.projects" :key="project.id"
+        :class="['list-row', { active: projectStore.currentProjectId === project.id }]" @click="enterProject(project)">
         <span class="col-name">
           <svg class="row-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -211,23 +223,27 @@ const enterProject = (project: Project) => {
         <span class="col-desc">{{ project.description }}</span>
         <span class="col-path" :title="project.path">{{ project.path }}</span>
         <span class="col-action">
-          <button class="row-action-btn" type="button" :title="t('projectpage.enter')" @click.stop="enterProject(project)">
+          <button class="row-action-btn" type="button" :title="t('projectpage.enter')"
+            @click.stop="enterProject(project)">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>
-          <button class="row-action-btn" type="button" :title="t('projectpage.edit')" @click.stop="openEditModal(project)">
+          <button class="row-action-btn" type="button" :title="t('projectpage.edit')"
+            @click.stop="openEditModal(project)">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
             </svg>
           </button>
-          <button class="row-action-btn row-delete" type="button" :title="t('projectpage.delete')" @click.stop="deleteProject(project.id)">
+          <button class="row-action-btn row-delete" type="button" :title="t('projectpage.delete')"
+            @click.stop="confirmDelete(project)">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
             </svg>
           </button>
         </span>
@@ -241,31 +257,19 @@ const enterProject = (project: Project) => {
         <div class="modal-body">
           <div class="form-field">
             <label class="form-label">{{ t("projectpage.name") }}</label>
-            <input
-              v-model="newProject.name"
-              class="form-input"
-              type="text"
-              :placeholder="t('projectpage.name-placeholder')"
-            />
+            <input v-model="newProject.name" class="form-input" type="text"
+              :placeholder="t('projectpage.name-placeholder')" />
           </div>
           <div class="form-field">
             <label class="form-label">{{ t("projectpage.description") }}</label>
-            <textarea
-              v-model="newProject.description"
-              class="form-input form-textarea"
-              :placeholder="t('projectpage.desc-placeholder')"
-              rows="3"
-            ></textarea>
+            <textarea v-model="newProject.description" class="form-input form-textarea"
+              :placeholder="t('projectpage.desc-placeholder')" rows="3"></textarea>
           </div>
           <div class="form-field">
             <label class="form-label">{{ t("projectpage.path") }}</label>
             <div class="path-input-row">
-              <input
-                v-model="newProject.path"
-                class="form-input form-path"
-                type="text"
-                :placeholder="t('projectpage.path-placeholder')"
-              />
+              <input v-model="newProject.path" class="form-input form-path" type="text"
+                :placeholder="t('projectpage.path-placeholder')" />
               <button class="btn btn-browse" type="button" :disabled="selectDirLoading" @click="selectDirectory">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round">
@@ -294,31 +298,19 @@ const enterProject = (project: Project) => {
         <div class="modal-body">
           <div class="form-field">
             <label class="form-label">{{ t("projectpage.name") }}</label>
-            <input
-              v-model="editForm.name"
-              class="form-input"
-              type="text"
-              :placeholder="t('projectpage.name-placeholder')"
-            />
+            <input v-model="editForm.name" class="form-input" type="text"
+              :placeholder="t('projectpage.name-placeholder')" />
           </div>
           <div class="form-field">
             <label class="form-label">{{ t("projectpage.description") }}</label>
-            <textarea
-              v-model="editForm.description"
-              class="form-input form-textarea"
-              :placeholder="t('projectpage.desc-placeholder')"
-              rows="3"
-            ></textarea>
+            <textarea v-model="editForm.description" class="form-input form-textarea"
+              :placeholder="t('projectpage.desc-placeholder')" rows="3"></textarea>
           </div>
           <div class="form-field">
             <label class="form-label">{{ t("projectpage.path") }}</label>
             <div class="path-input-row">
-              <input
-                v-model="editForm.path"
-                class="form-input form-path"
-                type="text"
-                :placeholder="t('projectpage.path-placeholder')"
-              />
+              <input v-model="editForm.path" class="form-input form-path" type="text"
+                :placeholder="t('projectpage.path-placeholder')" />
               <button class="btn btn-browse" type="button" :disabled="editDirLoading" @click="selectEditDirectory">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round">
@@ -339,6 +331,9 @@ const enterProject = (project: Project) => {
         </div>
       </div>
     </div>
+    <ConfirmModal v-if="showDeleteModal" :title="t('projectpage.delete-confirm-title')"
+      :message="t('projectpage.delete-confirm-msg', { name: deletingProject?.name })"
+      :confirm-text="t('projectpage.delete')" :danger="true" @confirm="onDeleteConfirm" @cancel="onDeleteCancel" />
   </div>
 </template>
 

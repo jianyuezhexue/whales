@@ -15,23 +15,9 @@ export const useProjectStore = defineStore("project", () => {
       id: "1",
       name: "Whales",
       description: "AI Agent 桌面客户端",
-      path: "/Users/dev/projects/whales",
+      path: "/Users/wang/code/whales",
       createdAt: Date.now() - 86400000,
-    },
-    {
-      id: "2",
-      name: "Gateway",
-      description: "API 网关服务",
-      path: "/Users/dev/projects/gateway",
-      createdAt: Date.now() - 172800000,
-    },
-    {
-      id: "3",
-      name: "Dashboard",
-      description: "数据可视化面板",
-      path: "/Users/dev/projects/dashboard",
-      createdAt: Date.now() - 259200000,
-    },
+    }
   ]);
 
   const currentProjectId = ref<string | null>("1");

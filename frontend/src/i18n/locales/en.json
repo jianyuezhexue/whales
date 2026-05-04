@@ -59,6 +59,8 @@
     "desc-placeholder": "Enter project description",
     "path-placeholder": "Select project folder",
     "delete": "Delete",
+    "delete-confirm-title": "Confirm Delete",
+    "delete-confirm-msg": "Are you sure you want to delete project \"{name}\"? This action cannot be undone.",
     "enter": "Enter",
     "edit": "Edit"
   },
@@ -79,6 +81,8 @@
     "confirm": "Confirm",
     "edit": "Edit",
     "delete": "Delete",
+    "delete-confirm-title": "Confirm Delete",
+    "delete-confirm-msg": "Are you sure you want to delete agent \"{name}\"? This action cannot be undone.",
     "empty-title": "No Agents",
     "empty-subtitle": "Click the new button to create an agent",
     "name-placeholder": "Enter agent name",

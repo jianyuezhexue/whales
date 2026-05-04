@@ -59,6 +59,8 @@
     "desc-placeholder": "请输入项目描述",
     "path-placeholder": "请选择项目文件夹",
     "delete": "删除",
+    "delete-confirm-title": "确认删除",
+    "delete-confirm-msg": "确定要删除项目「{name}」吗？此操作不可撤销。",
     "enter": "进入",
     "edit": "编辑"
   },
@@ -79,6 +81,8 @@
     "confirm": "确认",
     "edit": "编辑",
     "delete": "删除",
+    "delete-confirm-title": "确认删除",
+    "delete-confirm-msg": "确定要删除Agent「{name}」吗？此操作不可撤销。",
     "empty-title": "暂无Agent",
     "empty-subtitle": "点击新增按钮创建Agent",
     "name-placeholder": "请输入Agent名称",

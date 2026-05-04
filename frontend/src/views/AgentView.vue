@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
+import ConfirmModal from "@/components/ConfirmModal.vue";
 
 const { t } = useI18n();
 
@@ -221,6 +222,26 @@ const deleteAgent = (id: string) => {
   agents.value = agents.value.filter((a) => a.id !== id);
 };
 
+const showDeleteModal = ref(false);
+const deletingAgent = ref<Agent | null>(null);
+
+const confirmDelete = (agent: Agent) => {
+  deletingAgent.value = agent;
+  showDeleteModal.value = true;
+};
+
+const onDeleteConfirm = () => {
+  if (!deletingAgent.value) return;
+  deleteAgent(deletingAgent.value.id);
+  showDeleteModal.value = false;
+  deletingAgent.value = null;
+};
+
+const onDeleteCancel = () => {
+  showDeleteModal.value = false;
+  deletingAgent.value = null;
+};
+
 const openEditModal = (agent: Agent) => {
   editingAgent.value = agent;
   editForm.value = {
@@ -345,7 +366,7 @@ const openEditMcpDropdown = (e: MouseEvent) => {
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
             </button>
-            <button class="card-action-btn card-delete" type="button" :title="t('agentpage.delete')" @click="deleteAgent(agent.id)">
+            <button class="card-action-btn card-delete" type="button" :title="t('agentpage.delete')" @click="confirmDelete(agent)">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -562,6 +583,16 @@ const openEditMcpDropdown = (e: MouseEvent) => {
         </div>
       </div>
     </div>
+
+    <ConfirmModal
+      v-if="showDeleteModal"
+      :title="t('agentpage.delete-confirm-title')"
+      :message="t('agentpage.delete-confirm-msg', { name: deletingAgent?.name })"
+      :confirm-text="t('agentpage.delete')"
+      :danger="true"
+      @confirm="onDeleteConfirm"
+      @cancel="onDeleteCancel"
+    />
   </div>
 </template>
 
