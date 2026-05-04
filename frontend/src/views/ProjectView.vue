@@ -1,43 +1,13 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { useProjectStore } from "@/stores/project";
+import type { Project } from "@/stores/project";
 import { SelectDirectory } from "../../wailsjs/go/main/App";
 
 const { t } = useI18n();
+const projectStore = useProjectStore();
 
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-  path: string;
-  createdAt: number;
-}
-
-const projects = ref<Project[]>([
-  {
-    id: "1",
-    name: "Whales",
-    description: "AI Agent 桌面客户端",
-    path: "/Users/dev/projects/whales",
-    createdAt: Date.now() - 86400000,
-  },
-  {
-    id: "2",
-    name: "Gateway",
-    description: "API 网关服务",
-    path: "/Users/dev/projects/gateway",
-    createdAt: Date.now() - 172800000,
-  },
-  {
-    id: "3",
-    name: "Dashboard",
-    description: "数据可视化面板",
-    path: "/Users/dev/projects/dashboard",
-    createdAt: Date.now() - 259200000,
-  },
-]);
-
-const activeProjectId = ref<string | null>(null);
 const viewMode = ref<"grid" | "list">("grid");
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
@@ -87,21 +57,16 @@ const selectEditDirectory = async () => {
 
 const createProject = () => {
   if (!newProject.value.name.trim()) return;
-  projects.value.push({
-    id: String(Date.now()),
+  projectStore.addProject({
     name: newProject.value.name.trim(),
     description: newProject.value.description.trim(),
     path: newProject.value.path.trim(),
-    createdAt: Date.now(),
   });
   showCreateModal.value = false;
 };
 
 const deleteProject = (id: string) => {
-  projects.value = projects.value.filter((p) => p.id !== id);
-  if (activeProjectId.value === id) {
-    activeProjectId.value = null;
-  }
+  projectStore.deleteProject(id);
 };
 
 const openEditModal = (project: Project) => {
@@ -112,20 +77,16 @@ const openEditModal = (project: Project) => {
 
 const updateProject = () => {
   if (!editingProject.value || !editForm.value.name.trim()) return;
-  const idx = projects.value.findIndex((p) => p.id === editingProject.value!.id);
-  if (idx !== -1) {
-    projects.value[idx] = {
-      ...projects.value[idx],
-      name: editForm.value.name.trim(),
-      description: editForm.value.description.trim(),
-      path: editForm.value.path.trim(),
-    };
-  }
+  projectStore.updateProject(editingProject.value.id, {
+    name: editForm.value.name.trim(),
+    description: editForm.value.description.trim(),
+    path: editForm.value.path.trim(),
+  });
   showEditModal.value = false;
 };
 
 const enterProject = (project: Project) => {
-  activeProjectId.value = project.id;
+  projectStore.setCurrentProject(project.id);
 };
 </script>
 
@@ -173,7 +134,7 @@ const enterProject = (project: Project) => {
     </div>
 
     <!-- Empty state -->
-    <div v-if="projects.length === 0" class="empty-state">
+    <div v-if="projectStore.projects.length === 0" class="empty-state">
       <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#d0d0d0" stroke-width="1.5"
         stroke-linecap="round" stroke-linejoin="round">
         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -185,9 +146,9 @@ const enterProject = (project: Project) => {
     <!-- Grid view -->
     <div v-else-if="viewMode === 'grid'" class="project-grid">
       <div
-        v-for="project in projects"
+        v-for="project in projectStore.projects"
         :key="project.id"
-        :class="['project-card', { active: activeProjectId === project.id }]"
+        :class="['project-card', { active: projectStore.currentProjectId === project.id }]"
         @click="enterProject(project)"
       >
         <div class="card-header">
@@ -235,9 +196,9 @@ const enterProject = (project: Project) => {
         <span class="col-action"></span>
       </div>
       <div
-        v-for="project in projects"
+        v-for="project in projectStore.projects"
         :key="project.id"
-        :class="['list-row', { active: activeProjectId === project.id }]"
+        :class="['list-row', { active: projectStore.currentProjectId === project.id }]"
         @click="enterProject(project)"
       >
         <span class="col-name">

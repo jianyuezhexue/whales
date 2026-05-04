@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -75,4 +78,145 @@ func (a *App) SelectDirectory() (string, error) {
 		return "", err
 	}
 	return path, nil
+}
+
+// KnowledgeDir represents a knowledge category directory
+type KnowledgeDir struct {
+	Key  string `json:"key"`
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
+
+// FileInfo represents a file or directory entry
+type FileInfo struct {
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	IsDir   bool   `json:"isDir"`
+	Size    int64  `json:"size"`
+	ModTime string `json:"modTime"`
+}
+
+// EnsureKnowledgeDirs ensures the .whales directory and all category subdirectories exist under the project path.
+// Each category gets an index.md file if it doesn't exist.
+func (a *App) EnsureKnowledgeDirs(projectPath string) ([]KnowledgeDir, error) {
+	whalesDir := filepath.Join(projectPath, ".whales")
+	categories := []struct {
+		key  string
+		name string
+	}{
+		{"project", "项目知识"},
+		{"business", "业务知识"},
+		{"workflow", "工作流程"},
+		{"verifiable", "可验证知识"},
+	}
+
+	var result []KnowledgeDir
+
+	if err := os.MkdirAll(whalesDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create .whales directory: %w", err)
+	}
+
+	for _, cat := range categories {
+		catDir := filepath.Join(whalesDir, cat.key)
+		if err := os.MkdirAll(catDir, 0755); err != nil {
+			return nil, fmt.Errorf("failed to create category directory %s: %w", cat.key, err)
+		}
+		indexFile := filepath.Join(catDir, "index.md")
+		if _, err := os.Stat(indexFile); os.IsNotExist(err) {
+			defaultContent := fmt.Sprintf("# %s\n\n在此编写%s内容...\n", cat.name, cat.name)
+			if err := os.WriteFile(indexFile, []byte(defaultContent), 0644); err != nil {
+				return nil, fmt.Errorf("failed to create index.md for %s: %w", cat.key, err)
+			}
+		}
+		result = append(result, KnowledgeDir{
+			Key:  cat.key,
+			Name: cat.name,
+			Path: catDir,
+		})
+	}
+
+	return result, nil
+}
+
+// ReadKnowledgeFile reads the content of a file under the .whales directory.
+// The relativePath should be in the format "category/filename" (e.g., "project/index.md").
+func (a *App) ReadKnowledgeFile(projectPath string, relativePath string) (string, error) {
+	// Sanitize the relative path to prevent directory traversal
+	relativePath = filepath.Clean(relativePath)
+	if strings.HasPrefix(relativePath, "..") || filepath.IsAbs(relativePath) {
+		return "", fmt.Errorf("invalid path: %s", relativePath)
+	}
+	fullPath := filepath.Join(projectPath, ".whales", relativePath)
+	content, err := os.ReadFile(fullPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file %s: %w", relativePath, err)
+	}
+	return string(content), nil
+}
+
+// WriteKnowledgeFile writes content to a file under the .whales directory.
+func (a *App) WriteKnowledgeFile(projectPath string, relativePath string, content string) error {
+	relativePath = filepath.Clean(relativePath)
+	if strings.HasPrefix(relativePath, "..") || filepath.IsAbs(relativePath) {
+		return fmt.Errorf("invalid path: %s", relativePath)
+	}
+	fullPath := filepath.Join(projectPath, ".whales", relativePath)
+	dir := filepath.Dir(fullPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to ensure directory: %w", err)
+	}
+	if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write file %s: %w", relativePath, err)
+	}
+	return nil
+}
+
+// DeleteKnowledgeFile deletes a file under the .whales directory.
+func (a *App) DeleteKnowledgeFile(projectPath string, relativePath string) error {
+	relativePath = filepath.Clean(relativePath)
+	if strings.HasPrefix(relativePath, "..") || filepath.IsAbs(relativePath) {
+		return fmt.Errorf("invalid path: %s", relativePath)
+	}
+	// Don't allow deleting index.md
+	if filepath.Base(relativePath) == "index.md" {
+		return fmt.Errorf("cannot delete index.md")
+	}
+	fullPath := filepath.Join(projectPath, ".whales", relativePath)
+	if err := os.Remove(fullPath); err != nil {
+		return fmt.Errorf("failed to delete file %s: %w", relativePath, err)
+	}
+	return nil
+}
+
+// ListKnowledgeFiles lists all files in a category directory under .whales.
+func (a *App) ListKnowledgeFiles(projectPath string, category string) ([]FileInfo, error) {
+	category = filepath.Clean(category)
+	if strings.HasPrefix(category, "..") || filepath.IsAbs(category) {
+		return nil, fmt.Errorf("invalid category: %s", category)
+	}
+	dirPath := filepath.Join(projectPath, ".whales", category)
+
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []FileInfo{}, nil
+		}
+		return nil, fmt.Errorf("failed to list directory %s: %w", category, err)
+	}
+
+	var result []FileInfo
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		result = append(result, FileInfo{
+			Name:    entry.Name(),
+			Path:    filepath.Join(category, entry.Name()),
+			IsDir:   entry.IsDir(),
+			Size:    info.Size(),
+			ModTime: info.ModTime().Format("2006-01-02 15:04"),
+		})
+	}
+	return result, nil
 }

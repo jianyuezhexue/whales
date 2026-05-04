@@ -62,6 +62,51 @@
     "enter": "Enter",
     "edit": "Edit"
   },
+  "settingspage": {
+    "title": "Settings",
+    "language": "Language"
+  },
+  "agentpage": {
+    "title": "Agent Management",
+    "add": "New Agent",
+    "name": "Name",
+    "description": "Description",
+    "work-content": "Work Content",
+    "skills": "Skills",
+    "mcp": "MCP",
+    "avatar-hint": "Avatar is auto-generated from name",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "edit": "Edit",
+    "delete": "Delete",
+    "empty-title": "No Agents",
+    "empty-subtitle": "Click the new button to create an agent",
+    "name-placeholder": "Enter agent name",
+    "desc-placeholder": "Enter agent description",
+    "work-placeholder": "Enter agent work content",
+    "skills-placeholder": "Select skills",
+    "mcp-placeholder": "Select MCP"
+  },
+  "knowledgepage": {
+    "title": "Knowledge Management",
+    "tab-project": "Project",
+    "tab-business": "Business",
+    "tab-workflow": "Workflow",
+    "tab-verifiable": "Verifiable",
+    "preview": "Preview",
+    "edit": "Edit",
+    "files": "Files",
+    "save": "Save",
+    "cancel-edit": "Cancel",
+    "no-project": "Please select a project first",
+    "new-file": "New File",
+    "file-name": "File Name",
+    "new-file-placeholder": "Enter file name (without extension)",
+    "create": "Create",
+    "delete": "Delete",
+    "delete-confirm": "Are you sure you want to delete this file?",
+    "empty-content": "No content"
+  },
   "global": {
     "not-supported": "Because it is a beta version, it can't be done for the time being, it will be completed later.",
     "click-link": "The currently clicked link is: "

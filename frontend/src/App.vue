@@ -3,10 +3,12 @@ import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import logoPng from "@/assets/logo.png";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
+import { useProjectStore } from "@/stores/project";
 
-const { t, availableLocales: languages, locale } = useI18n();
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+const projectStore = useProjectStore();
 
 // Sidebar collapse state
 const collapsed = ref(false);
@@ -40,22 +42,24 @@ const selectMenu = (key: string) => {
   }
 };
 
-const openSettings = () => {};
-
-// Language dropdown
-const langOpen = ref(false);
-const langRef = ref<HTMLElement | null>(null);
-const toggleLang = () => {
-  langOpen.value = !langOpen.value;
+const openSettings = () => {
+  router.push("/settings");
 };
-const selectLanguage = (item: string) => {
-  locale.value = item;
-  langOpen.value = false;
+
+// Project dropdown
+const projectOpen = ref(false);
+const projectRef = ref<HTMLElement | null>(null);
+const toggleProject = () => {
+  projectOpen.value = !projectOpen.value;
+};
+const selectProject = (id: string) => {
+  projectStore.setCurrentProject(id);
+  projectOpen.value = false;
 };
 const onDocumentClick = (e: MouseEvent) => {
-  if (!langRef.value) return;
-  if (!langRef.value.contains(e.target as Node)) {
-    langOpen.value = false;
+  if (!projectRef.value) return;
+  if (!projectRef.value.contains(e.target as Node)) {
+    projectOpen.value = false;
   }
 };
 
@@ -154,6 +158,7 @@ onBeforeUnmount(() => {
         </div>
       </nav>
 
+      <!-- 设置 -->
       <div class="sidebar-footer">
         <button class="settings-btn" type="button" @click="openSettings">
           <svg class="settings-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
@@ -177,19 +182,24 @@ onBeforeUnmount(() => {
             <line x1="9" y1="4" x2="9" y2="20" />
           </svg>
         </button>
-        <div class="header-right" ref="langRef">
-          <div class="language-dropdown" :class="{ open: langOpen }">
-            <button class="language-trigger" type="button" @click="toggleLang">
-              <span>{{ t("languages." + locale) }}</span>
+        <div class="header-right" ref="projectRef">
+          <div class="project-dropdown" :class="{ open: projectOpen }">
+            <button class="project-trigger" type="button" @click="toggleProject">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+              <span>{{ projectStore.currentProject?.name || t("homepage.workspace-title") }}</span>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9" />
               </svg>
             </button>
-            <ul v-if="langOpen" class="language-list">
-              <li v-for="item in languages" :key="item" :class="{ active: item === locale }"
-                @click="selectLanguage(item)">
-                {{ t("languages." + item) }}
+            <ul v-if="projectOpen" class="project-list">
+              <li v-for="project in projectStore.projects" :key="project.id"
+                :class="{ active: project.id === projectStore.currentProjectId }"
+                @click="selectProject(project.id)">
+                {{ project.name }}
               </li>
             </ul>
           </div>
@@ -507,10 +517,10 @@ body {
     }
   }
 
-  .language-dropdown {
+  .project-dropdown {
     position: relative;
 
-    .language-trigger {
+    .project-trigger {
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -532,15 +542,15 @@ body {
       }
     }
 
-    &.open .language-trigger svg {
+    &.open .project-trigger svg:last-child {
       transform: rotate(180deg);
     }
 
-    .language-list {
+    .project-list {
       position: absolute;
       top: calc(100% + 4px);
       right: 0;
-      min-width: 140px;
+      min-width: 160px;
       margin: 0;
       padding: 4px;
       list-style: none;
