@@ -1,0 +1,44 @@
+[
+  {
+    "id": "8f794f75-c0b8-4689-a367-830a47c3cc79",
+    "name": "默认数据结构",
+    "fields": [
+      {
+        "id": "3745e1cc-89c8-4cc3-96ea-10242bd96971",
+        "name": "title",
+        "type": "string",
+        "required": true
+      },
+      {
+        "id": "dac16d0a-8373-40ab-abda-2ae52dc531d0",
+        "name": "description",
+        "type": "string",
+        "required": false
+      }
+    ]
+  },
+  {
+    "id": "70a4b3f8-1c5d-4447-bedd-b6ccc3ecf7e1",
+    "name": "Add",
+    "fields": [
+      {
+        "id": "325dec08-e465-4f2c-b0bd-7dc38c9b9236",
+        "name": "Daf",
+        "type": "string",
+        "required": true
+      },
+      {
+        "id": "3a7c97cb-d3ba-449f-ad22-6c9c924e9f97",
+        "name": "Asdf",
+        "type": "string",
+        "required": true
+      },
+      {
+        "id": "f4d8cf8e-134f-435d-bf19-8df1e5f75c27",
+        "name": "Adsfasdf",
+        "type": "string",
+        "required": true
+      }
+    ]
+  }
+]

@@ -80,13 +80,6 @@ func (a *App) SelectDirectory() (string, error) {
 	return path, nil
 }
 
-// KnowledgeDir represents a knowledge category directory
-type KnowledgeDir struct {
-	Key  string `json:"key"`
-	Name string `json:"name"`
-	Path string `json:"path"`
-}
-
 // FileInfo represents a file or directory entry
 type FileInfo struct {
 	Name    string `json:"name"`
@@ -96,46 +89,39 @@ type FileInfo struct {
 	ModTime string `json:"modTime"`
 }
 
-// EnsureKnowledgeDirs ensures the .whales directory and all category subdirectories exist under the project path.
-// Each category gets an index.md file if it doesn't exist.
-func (a *App) EnsureKnowledgeDirs(projectPath string) ([]KnowledgeDir, error) {
+// EnsureKnowledgeDirs ensures the .whales/wiki directory exists under the project path.
+// Creates an index.md file if it doesn't exist.
+func (a *App) EnsureKnowledgeDirs(projectPath string) error {
 	whalesDir := filepath.Join(projectPath, ".whales")
-	categories := []struct {
-		key  string
-		name string
-	}{
-		{"project", "项目知识"},
-		{"business", "业务知识"},
-		{"workflow", "工作流程"},
-		{"verifiable", "可验证知识"},
+	wikiDir := filepath.Join(whalesDir, "wiki")
+
+	if err := os.MkdirAll(wikiDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .whales/wiki directory: %w", err)
 	}
 
-	var result []KnowledgeDir
-
-	if err := os.MkdirAll(whalesDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create .whales directory: %w", err)
-	}
-
-	for _, cat := range categories {
-		catDir := filepath.Join(whalesDir, cat.key)
-		if err := os.MkdirAll(catDir, 0755); err != nil {
-			return nil, fmt.Errorf("failed to create category directory %s: %w", cat.key, err)
+	indexFile := filepath.Join(wikiDir, "index.md")
+	if _, err := os.Stat(indexFile); os.IsNotExist(err) {
+		defaultContent := "# Wiki知识\n\n在此编写Wiki知识内容...\n"
+		if err := os.WriteFile(indexFile, []byte(defaultContent), 0644); err != nil {
+			return fmt.Errorf("failed to create wiki/index.md: %w", err)
 		}
-		indexFile := filepath.Join(catDir, "index.md")
-		if _, err := os.Stat(indexFile); os.IsNotExist(err) {
-			defaultContent := fmt.Sprintf("# %s\n\n在此编写%s内容...\n", cat.name, cat.name)
-			if err := os.WriteFile(indexFile, []byte(defaultContent), 0644); err != nil {
-				return nil, fmt.Errorf("failed to create index.md for %s: %w", cat.key, err)
-			}
-		}
-		result = append(result, KnowledgeDir{
-			Key:  cat.key,
-			Name: cat.name,
-			Path: catDir,
-		})
 	}
 
-	return result, nil
+	return nil
+}
+
+// CreateKnowledgeDir creates a directory under the .whales directory.
+// The relativePath should be relative to .whales/ (e.g., "wiki/subdir").
+func (a *App) CreateKnowledgeDir(projectPath string, relativePath string) error {
+	relativePath = filepath.Clean(relativePath)
+	if strings.HasPrefix(relativePath, "..") || filepath.IsAbs(relativePath) {
+		return fmt.Errorf("invalid path: %s", relativePath)
+	}
+	fullPath := filepath.Join(projectPath, ".whales", relativePath)
+	if err := os.MkdirAll(fullPath, 0755); err != nil {
+		return fmt.Errorf("failed to create directory %s: %w", relativePath, err)
+	}
+	return nil
 }
 
 // ReadKnowledgeFile reads the content of a file under the .whales directory.

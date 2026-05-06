@@ -20,22 +20,6 @@ export namespace main {
 	        this.modTime = source["modTime"];
 	    }
 	}
-	export class KnowledgeDir {
-	    key: string;
-	    name: string;
-	    path: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new KnowledgeDir(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.key = source["key"];
-	        this.name = source["name"];
-	        this.path = source["path"];
-	    }
-	}
 	export class StarResult {
 	    message: string;
 	    count: number;
