@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import { useI18n } from "vue-i18n";
 import TaskCard from "@/components/task/TaskCard.vue";
 import type { Task } from "@/components/task/TaskList.vue";
 import { useWorkflowStore } from "@/stores/workflow";
 import { useProjectStore } from "@/stores/project";
+
+const { t } = useI18n();
 
 const tasks = ref<Task[]>([]);
 const inputText = ref("");
@@ -23,12 +26,11 @@ const allWorkflows = computed(() => {
 
 // Agent 选项
 const agentOptions = [
-  { value: "", label: "不选择", command: "" },
   { value: "claude-code", label: "claude code", command: "claude" },
   { value: "codex", label: "codex", command: "codex" },
   { value: "openclaw", label: "openclaw", command: "openclaw onboard" },
   { value: "hermes", label: "Hermes Agent", command: "hermes" },
-  { value: "quder", label: "quder", command: "quder" },
+  { value: "qodercli", label: "qodercli", command: "qodercli" },
 ];
 const selectedAgent = ref("claude-code");
 const selectedAgentLabel = computed(() => {
@@ -162,7 +164,7 @@ const clearWorkflow = (e: Event) => {
 <template>
   <div class="task-page page-layout">
     <div class="page-header">
-      <h1 class="page-title">任务管理</h1>
+      <h1 class="page-title">{{ t("taskpage.title") }}</h1>
       <div class="header-actions">
         <div class="column-tabs">
           <button

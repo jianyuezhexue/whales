@@ -248,5 +248,8 @@
   "global": {
     "not-supported": "Because it is a beta version, it can't be done for the time being, it will be completed later.",
     "click-link": "The currently clicked link is: "
+  },
+  "taskpage": {
+    "title": "Task Management"
   }
 }
