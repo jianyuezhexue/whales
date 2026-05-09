@@ -2,7 +2,7 @@
 export default { name: 'TaskView' };
 </script>
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
 import { useI18n } from "vue-i18n";
 import { storeToRefs } from "pinia";
 import TaskCard from "@/components/task/TaskCard.vue";
@@ -62,6 +62,41 @@ const columnOptions = [
 const gridColumns = computed(() => {
   const n = parseInt(columnMode.value);
   return `repeat(${n}, 1fr)`;
+});
+
+// Card refs by task id — used to fan-out fit() calls on layout-affecting
+// events (column change, window resize). Event-driven instead of
+// per-terminal ResizeObservers, which used to fire fit() many times
+// during a single layout transition and cause visible character jitter.
+const cardRefs = new Map<string, InstanceType<typeof TaskCard>>();
+const setCardRef = (taskId: string, el: any) => {
+  if (el) cardRefs.set(taskId, el);
+  else cardRefs.delete(taskId);
+};
+const fitAllTerminals = () => {
+  cardRefs.forEach((card) => card?.fit?.());
+};
+
+watch(columnMode, () => {
+  nextTick(fitAllTerminals);
+});
+
+let winResizeTimer: number | null = null;
+const onWindowResize = () => {
+  if (winResizeTimer !== null) clearTimeout(winResizeTimer);
+  winResizeTimer = window.setTimeout(() => {
+    winResizeTimer = null;
+    fitAllTerminals();
+  }, 120);
+};
+
+onMounted(() => {
+  window.addEventListener("resize", onWindowResize);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", onWindowResize);
+  if (winResizeTimer !== null) clearTimeout(winResizeTimer);
 });
 
 // 当前选中的项目路径
@@ -177,6 +212,7 @@ const clearWorkflow = (e: Event) => {
     <!-- 卡片网格 -->
     <div class="task-grid" :style="{ gridTemplateColumns: gridColumns }">
       <TaskCard v-for="task in tasks" :key="task.id" :task="task"
+        :ref="(el: any) => setCardRef(task.id, el)"
         @close="handleCloseCard" @preview="handlePreview" @rename="handleRenameTask" />
       <div v-if="tasks.length === 0" class="empty-state">
         <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#c0c0c0"
@@ -324,10 +360,12 @@ const clearWorkflow = (e: Event) => {
 .task-grid {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   position: relative;
   display: grid;
   gap: 12px;
   padding: 12px;
+  overflow-x: hidden;
   overflow-y: auto;
   align-content: start;
 

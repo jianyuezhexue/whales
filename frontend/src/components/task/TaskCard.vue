@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick } from "vue";
+import { ref, nextTick, watch } from "vue";
 import type { Task } from "./TaskList.vue";
 import TaskTerminal from "./TaskTerminal.vue";
 
@@ -18,10 +18,22 @@ const menuOpen = ref(false);
 const renaming = ref(false);
 const renameInput = ref("");
 const renameInputRef = ref<HTMLInputElement>();
+const terminalRef = ref<InstanceType<typeof TaskTerminal>>();
 
 const toggleMaximize = () => {
   maximized.value = !maximized.value;
 };
+
+// Re-fit the terminal exactly once when this card maximizes/restores.
+// nextTick lets Vue commit the .maximized class first so clientWidth/
+// clientHeight reflect the new layout when fit() reads them.
+watch(maximized, () => {
+  nextTick(() => terminalRef.value?.fit());
+});
+
+defineExpose({
+  fit: () => terminalRef.value?.fit(),
+});
 
 const toggleMenu = () => {
   menuOpen.value = !menuOpen.value;
@@ -118,7 +130,8 @@ const handleDelete = () => {
       </div>
     </div>
     <div class="card-body">
-      <TaskTerminal :task-id="task.id" @exited="emit('close', task.id)" />
+      <TaskTerminal ref="terminalRef" :task-id="task.id"
+        @exited="emit('close', task.id)" />
     </div>
   </div>
 </template>
@@ -128,6 +141,7 @@ const handleDelete = () => {
   display: flex;
   flex-direction: column;
   height: 340px;
+  min-width: 0;
   background-color: #1e1e1e;
   border: 1px solid #333333;
   border-radius: 8px;
