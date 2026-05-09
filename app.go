@@ -7,13 +7,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	"changeme/internal/pty"
+
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
 type App struct {
-	ctx       context.Context
-	starCount int
+	ctx        context.Context
+	starCount  int
+	ptyManager *pty.Manager
 }
 
 // NewApp creates a new App application struct
@@ -28,6 +31,7 @@ func (a *App) startup(ctx context.Context) {
 	// Perform your setup here
 	// 在这里执行初始化设置
 	a.ctx = ctx
+	a.ptyManager = pty.NewManager(ctx)
 }
 
 // domReady is called after the front-end dom has been loaded
@@ -52,6 +56,9 @@ func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 func (a *App) shutdown(ctx context.Context) {
 	// Perform your teardown here
 	// 在此处做一些资源释放的操作
+	if a.ptyManager != nil {
+		a.ptyManager.Shutdown()
+	}
 }
 
 type StarResult struct {
@@ -78,6 +85,56 @@ func (a *App) SelectDirectory() (string, error) {
 		return "", err
 	}
 	return path, nil
+}
+
+// ExportFile opens a save dialog with the suggested file name, writes the content to the selected path.
+// ExportFile 打开保存对话框，将内容写入选择的文件路径。
+func (a *App) ExportFile(suggestedName string, content string) (string, error) {
+	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "导出文件",
+		DefaultFilename: suggestedName,
+		Filters: []runtime.FileFilter{
+			{
+				DisplayName: "JSON Files (*.json)",
+				Pattern:     "*.json",
+			},
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	if path == "" {
+		return "", nil // user cancelled
+	}
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		return "", fmt.Errorf("failed to write file: %w", err)
+	}
+	return path, nil
+}
+
+// ImportFile opens a file dialog and returns the content of the selected JSON file.
+// ImportFile 打开文件选择对话框并返回选中文件的内容。
+func (a *App) ImportFile() (string, error) {
+	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "导入文件",
+		Filters: []runtime.FileFilter{
+			{
+				DisplayName: "JSON Files (*.json)",
+				Pattern:     "*.json",
+			},
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	if path == "" {
+		return "", nil // user cancelled
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file: %w", err)
+	}
+	return string(data), nil
 }
 
 // FileInfo represents a file or directory entry
@@ -205,4 +262,45 @@ func (a *App) ListKnowledgeFiles(projectPath string, category string) ([]FileInf
 		})
 	}
 	return result, nil
+}
+
+// --- PTY Terminal Methods ---
+
+// PtyStart launches a shell command in a PTY for the given task.
+// The frontend subscribes to "pty-output" and "pty-exit" events for output.
+// initialInput is written to the PTY after the process has initialized.
+// workDir sets the working directory for the command.
+// PtyStart 为指定任务在PTY中启动shell命令。
+func (a *App) PtyStart(taskId string, shellCommand string, initialInput string, workDir string) error {
+	if a.ptyManager == nil {
+		return fmt.Errorf("pty manager not initialized")
+	}
+	return a.ptyManager.Start(taskId, shellCommand, initialInput, workDir)
+}
+
+// PtyWrite sends keyboard input to an active PTY session.
+// PtyWrite 向指定的PTY会话发送键盘输入。
+func (a *App) PtyWrite(taskId string, input string) error {
+	if a.ptyManager == nil {
+		return fmt.Errorf("pty manager not initialized")
+	}
+	return a.ptyManager.Write(taskId, input)
+}
+
+// PtyStop terminates the PTY session for the given task.
+// PtyStop 终止指定任务的PTY会话。
+func (a *App) PtyStop(taskId string) error {
+	if a.ptyManager == nil {
+		return nil
+	}
+	return a.ptyManager.Stop(taskId)
+}
+
+// PtyResize adjusts the terminal dimensions for the given task.
+// PtyResize 调整指定任务的终端尺寸。
+func (a *App) PtyResize(taskId string, cols int, rows int) error {
+	if a.ptyManager == nil {
+		return fmt.Errorf("pty manager not initialized")
+	}
+	return a.ptyManager.Resize(taskId, cols, rows)
 }

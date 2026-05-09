@@ -14,8 +14,32 @@ export function EnsureKnowledgeDirs(arg1) {
   return window['go']['main']['App']['EnsureKnowledgeDirs'](arg1);
 }
 
+export function ExportFile(arg1, arg2) {
+  return window['go']['main']['App']['ExportFile'](arg1, arg2);
+}
+
+export function ImportFile() {
+  return window['go']['main']['App']['ImportFile']();
+}
+
 export function ListKnowledgeFiles(arg1, arg2) {
   return window['go']['main']['App']['ListKnowledgeFiles'](arg1, arg2);
+}
+
+export function PtyResize(arg1, arg2, arg3) {
+  return window['go']['main']['App']['PtyResize'](arg1, arg2, arg3);
+}
+
+export function PtyStart(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['PtyStart'](arg1, arg2, arg3, arg4);
+}
+
+export function PtyStop(arg1) {
+  return window['go']['main']['App']['PtyStop'](arg1);
+}
+
+export function PtyWrite(arg1, arg2) {
+  return window['go']['main']['App']['PtyWrite'](arg1, arg2);
 }
 
 export function ReadKnowledgeFile(arg1, arg2) {

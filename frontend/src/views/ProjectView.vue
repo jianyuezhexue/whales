@@ -3,18 +3,20 @@ import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useProjectStore } from "@/stores/project";
 import type { Project } from "@/stores/project";
+import { useWorkflowStore } from "@/stores/workflow";
 import { SelectDirectory } from "../../wailsjs/go/main/App";
 import ConfirmModal from "@/components/ConfirmModal.vue";
 
 const { t } = useI18n();
 const projectStore = useProjectStore();
+const workflowStore = useWorkflowStore();
 
 const viewMode = ref<"grid" | "list">("grid");
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const editingProject = ref<Project | null>(null);
-const editForm = ref({ name: "", description: "", path: "" });
-const newProject = ref({ name: "", description: "", path: "" });
+const editForm = ref({ name: "", description: "", path: "", workflowGroupId: "" });
+const newProject = ref({ name: "", description: "", path: "", workflowGroupId: "" });
 const selectDirLoading = ref(false);
 const editDirLoading = ref(false);
 
@@ -24,7 +26,7 @@ const formatDate = (timestamp: number) => {
 };
 
 const openCreateModal = () => {
-  newProject.value = { name: "", description: "", path: "" };
+  newProject.value = { name: "", description: "", path: "", workflowGroupId: workflowStore.currentGroupId || workflowStore.workflowGroups[0]?.id || "" };
   showCreateModal.value = true;
 };
 
@@ -62,6 +64,7 @@ const createProject = () => {
     name: newProject.value.name.trim(),
     description: newProject.value.description.trim(),
     path: newProject.value.path.trim(),
+    workflowGroupId: newProject.value.workflowGroupId,
   });
   showCreateModal.value = false;
 };
@@ -88,7 +91,7 @@ const onDeleteCancel = () => {
 
 const openEditModal = (project: Project) => {
   editingProject.value = project;
-  editForm.value = { name: project.name, description: project.description, path: project.path };
+  editForm.value = { name: project.name, description: project.description, path: project.path, workflowGroupId: project.workflowGroupId || "" };
   showEditModal.value = true;
 };
 
@@ -98,6 +101,7 @@ const updateProject = () => {
     name: editForm.value.name.trim(),
     description: editForm.value.description.trim(),
     path: editForm.value.path.trim(),
+    workflowGroupId: editForm.value.workflowGroupId,
   });
   showEditModal.value = false;
 };
@@ -266,6 +270,13 @@ const enterProject = (project: Project) => {
               :placeholder="t('projectpage.desc-placeholder')" rows="3"></textarea>
           </div>
           <div class="form-field">
+            <label class="form-label">{{ t("projectpage.workflow-group") }}</label>
+            <select v-model="newProject.workflowGroupId" class="form-input form-select">
+              <option value="">{{ t("projectpage.workflow-group-placeholder") }}</option>
+              <option v-for="g in workflowStore.workflowGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
+            </select>
+          </div>
+          <div class="form-field">
             <label class="form-label">{{ t("projectpage.path") }}</label>
             <div class="path-input-row">
               <input v-model="newProject.path" class="form-input form-path" type="text"
@@ -305,6 +316,13 @@ const enterProject = (project: Project) => {
             <label class="form-label">{{ t("projectpage.description") }}</label>
             <textarea v-model="editForm.description" class="form-input form-textarea"
               :placeholder="t('projectpage.desc-placeholder')" rows="3"></textarea>
+          </div>
+          <div class="form-field">
+            <label class="form-label">{{ t("projectpage.workflow-group") }}</label>
+            <select v-model="editForm.workflowGroupId" class="form-input form-select">
+              <option value="">{{ t("projectpage.workflow-group-placeholder") }}</option>
+              <option v-for="g in workflowStore.workflowGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
+            </select>
           </div>
           <div class="form-field">
             <label class="form-label">{{ t("projectpage.path") }}</label>
@@ -740,6 +758,15 @@ const enterProject = (project: Project) => {
     .form-path {
       flex: 1;
     }
+  }
+
+  .form-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' width='12' height='12' fill='none' stroke='%239a9a9a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 28px;
   }
 }
 

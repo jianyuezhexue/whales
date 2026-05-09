@@ -6,6 +6,7 @@ export interface Project {
   name: string;
   description: string;
   path: string;
+  workflowGroupId: string;
   createdAt: number;
 }
 
@@ -16,6 +17,7 @@ export const useProjectStore = defineStore("project", () => {
       name: "Whales",
       description: "AI Agent 桌面客户端",
       path: "/Users/wang/code/whales",
+      workflowGroupId: "g1",
       createdAt: Date.now() - 86400000,
     }
   ]);
@@ -38,7 +40,7 @@ export const useProjectStore = defineStore("project", () => {
     });
   }
 
-  function updateProject(id: string, data: Partial<Pick<Project, "name" | "description" | "path">>) {
+  function updateProject(id: string, data: Partial<Pick<Project, "name" | "description" | "path" | "workflowGroupId">>) {
     const idx = projects.value.findIndex((p) => p.id === id);
     if (idx !== -1) {
       projects.value[idx] = { ...projects.value[idx], ...data };

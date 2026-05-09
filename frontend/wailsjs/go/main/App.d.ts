@@ -8,7 +8,19 @@ export function DeleteKnowledgeFile(arg1:string,arg2:string):Promise<void>;
 
 export function EnsureKnowledgeDirs(arg1:string):Promise<void>;
 
+export function ExportFile(arg1:string,arg2:string):Promise<string>;
+
+export function ImportFile():Promise<string>;
+
 export function ListKnowledgeFiles(arg1:string,arg2:string):Promise<Array<main.FileInfo>>;
+
+export function PtyResize(arg1:string,arg2:number,arg3:number):Promise<void>;
+
+export function PtyStart(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
+
+export function PtyStop(arg1:string):Promise<void>;
+
+export function PtyWrite(arg1:string,arg2:string):Promise<void>;
 
 export function ReadKnowledgeFile(arg1:string,arg2:string):Promise<string>;
 

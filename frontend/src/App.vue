@@ -31,7 +31,11 @@ const menuItems = computed(() => [
 ]);
 
 const activeMenu = computed(() => {
-  const item = menuItems.value.find((m) => m.route === route.path);
+  const item = menuItems.value.find((m) => {
+    if (m.route === "/" && route.path === "/") return true;
+    if (m.route !== "/" && route.path.startsWith(m.route)) return true;
+    return false;
+  });
   return item ? item.key : "";
 });
 
