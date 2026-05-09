@@ -250,6 +250,7 @@
     "click-link": "The currently clicked link is: "
   },
   "taskpage": {
-    "title": "Task Management"
+    "title": "Task Management",
+    "input-placeholder": "Enter task description, press Enter to send..."
   }
 }

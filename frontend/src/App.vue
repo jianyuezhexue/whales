@@ -210,7 +210,9 @@ onBeforeUnmount(() => {
         </div>
       </header>
       <div class="main-body">
-        <router-view />
+        <keep-alive>
+          <router-view />
+        </keep-alive>
       </div>
     </main>
   </div>

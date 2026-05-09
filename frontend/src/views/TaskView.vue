@@ -1,16 +1,18 @@
+<script lang="ts">
+export default { name: 'TaskView' };
+</script>
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
+import { storeToRefs } from "pinia";
 import TaskCard from "@/components/task/TaskCard.vue";
-import type { Task } from "@/components/task/TaskList.vue";
 import { useWorkflowStore } from "@/stores/workflow";
 import { useProjectStore } from "@/stores/project";
+import { useTaskStore } from "@/stores/task";
 
 const { t } = useI18n();
-
-const tasks = ref<Task[]>([]);
-const inputText = ref("");
-let nextId = 1;
+const taskStore = useTaskStore();
+const { tasks, inputText } = storeToRefs(taskStore);
 
 // 工作流数据
 const workflowStore = useWorkflowStore();
@@ -90,15 +92,13 @@ const handleSend = () => {
   if (!text) return;
 
   const wf = allWorkflows.value.find((w) => w.id === selectedWorkflowId.value);
-  const task: Task = {
-    id: String(nextId++),
+  const task = taskStore.addTask({
     name: text,
     status: "pending",
     workflowId: selectedWorkflowId.value || undefined,
     workflowName: wf?.name,
     agentName: selectedAgentLabel.value || undefined,
-  };
-  tasks.value.push(task);
+  });
   inputText.value = "";
   startTaskAgent(task.id, text);
 };
@@ -113,18 +113,12 @@ const handleCloseCard = (taskId: string) => {
   } catch {
     // Wails not available
   }
-  const idx = tasks.value.findIndex((t) => t.id === taskId);
-  if (idx !== -1) {
-    tasks.value.splice(idx, 1);
-  }
+  taskStore.removeTask(taskId);
 };
 
 // 重命名任务
 const handleRenameTask = (taskId: string, newName: string) => {
-  const task = tasks.value.find((t) => t.id === taskId);
-  if (task) {
-    task.name = newName;
-  }
+  taskStore.updateTask(taskId, { name: newName });
 };
 
 // 预览工作结果
@@ -261,7 +255,7 @@ const clearWorkflow = (e: Event) => {
 
         <!-- 输入框 -->
         <input v-model="inputText" class="task-input" type="text"
-          placeholder="输入任务描述，回车发送..."
+          :placeholder="t('taskpage.input-placeholder')"
           @keyup.enter="handleSend" />
 
         <!-- 发送按钮 -->

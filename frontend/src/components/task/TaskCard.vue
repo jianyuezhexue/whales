@@ -132,7 +132,6 @@ const handleDelete = () => {
   border: 1px solid #333333;
   border-radius: 8px;
   overflow: visible;
-  transition: all 0.2s ease;
 
   &.maximized {
     position: absolute;

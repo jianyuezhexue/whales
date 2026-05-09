@@ -282,6 +282,7 @@
     "click-link": "当前点击的链接是: "
   },
   "taskpage": {
-    "title": "任务管理"
+    "title": "任务管理",
+    "input-placeholder": "输入任务描述，回车发送..."
   }
 }
