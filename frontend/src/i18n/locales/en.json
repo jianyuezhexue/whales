@@ -321,6 +321,14 @@
     "user-created": "Manual",
     "no-process": "No execution process recorded",
     "no-collaboration": "No collaboration data",
-    "subtask-progress": "Subtask Progress"
+    "subtask-progress": "Subtask Progress",
+    "schedule": "Schedule",
+    "schedule-interval": "Interval",
+    "schedule-daily": "Daily",
+    "schedule-every": "Every",
+    "schedule-seconds": "sec",
+    "schedule-minutes": "min",
+    "schedule-hours": "hr",
+    "schedule-at": "At"
   }
 }

@@ -190,27 +190,56 @@ export const useAuiPluginStore = defineStore("auiPlugin", () => {
         if (!assets) return
 
         // Inject CSS
-        if (assets.CSS) {
+        if (assets.css) {
           const existing = document.querySelector(`style[data-aui-plugin="${pluginId}"]`)
           if (existing) existing.remove()
           const style = document.createElement("style")
-          style.textContent = assets.CSS
+          style.textContent = assets.css
           style.setAttribute("data-aui-plugin", pluginId)
           document.head.appendChild(style)
         }
 
         // Inject JS
-        if (assets.JS) {
+        if (assets.js) {
           const existing = document.querySelector(`script[data-aui-plugin="${pluginId}"]`)
           if (existing) existing.remove()
           const script = document.createElement("script")
-          script.textContent = assets.JS
+          script.textContent = assets.js
           script.setAttribute("data-aui-plugin", pluginId)
           document.head.appendChild(script)
         }
       }
+    } else {
+      // Mock mode: fetch plugin files from dev server
+      const stylePath = `/aui-plugins/${pluginId}/renderer.css`
+      const scriptPath = `/aui-plugins/${pluginId}/renderer.js`
+
+      try {
+        const cssRes = await fetch(stylePath)
+        if (cssRes.ok) {
+          const css = await cssRes.text()
+          const existing = document.querySelector(`style[data-aui-plugin="${pluginId}"]`)
+          if (existing) existing.remove()
+          const style = document.createElement("style")
+          style.textContent = css
+          style.setAttribute("data-aui-plugin", pluginId)
+          document.head.appendChild(style)
+        }
+      } catch { /* plugin may not have CSS */ }
+
+      try {
+        const jsRes = await fetch(scriptPath)
+        if (jsRes.ok) {
+          const js = await jsRes.text()
+          const existing = document.querySelector(`script[data-aui-plugin="${pluginId}"]`)
+          if (existing) existing.remove()
+          const script = document.createElement("script")
+          script.textContent = js
+          script.setAttribute("data-aui-plugin", pluginId)
+          document.head.appendChild(script)
+        }
+      } catch { /* plugin may not have JS */ }
     }
-    // For mock mode, plugins are already included in the app bundle
 
     loadedPlugins.value.add(pluginId)
   }

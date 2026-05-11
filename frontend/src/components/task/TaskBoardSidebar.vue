@@ -41,11 +41,14 @@ const renameInput = ref("");
 
 // Action dropdown: fixed-position to avoid overflow clipping
 const openMenuId = ref<string | null>(null);
+const confirmDeleteId = ref<string | null>(null);
+const childConfirmDeleteId = ref<string | null>(null);
 const menuStyle = ref<Record<string, string>>({});
 
 const toggleMenu = (taskId: string, event: MouseEvent) => {
   if (openMenuId.value === taskId) {
     openMenuId.value = null;
+    confirmDeleteId.value = null;
     return;
   }
   const btn = event.currentTarget as HTMLElement;
@@ -86,8 +89,35 @@ const cancelRename = () => {
 };
 
 const handleDelete = (taskId: string) => {
-  taskStore.removeBoardTask(taskId);
+  confirmDeleteId.value = taskId;
+};
+
+const cancelDelete = () => {
+  confirmDeleteId.value = null;
   openMenuId.value = null;
+};
+
+const confirmDeleteAction = () => {
+  if (confirmDeleteId.value) {
+    taskStore.removeBoardTask(confirmDeleteId.value);
+  }
+  confirmDeleteId.value = null;
+  openMenuId.value = null;
+};
+
+const handleChildDelete = (taskId: string) => {
+  childConfirmDeleteId.value = taskId;
+};
+
+const confirmChildDelete = () => {
+  if (childConfirmDeleteId.value) {
+    taskStore.removeBoardTask(childConfirmDeleteId.value);
+  }
+  childConfirmDeleteId.value = null;
+};
+
+const cancelChildDelete = () => {
+  childConfirmDeleteId.value = null;
 };
 
 const handleBlur = () => {
@@ -117,6 +147,17 @@ const handleEscape = () => {
   subtaskInput.value = "";
 };
 
+const scheduleLabel = (task: { schedule?: { enabled: boolean; mode: string; intervalValue: number; intervalUnit: string; dailyTime: string } }) => {
+  if (!task.schedule?.enabled) return "";
+  if (task.schedule.mode === "interval") {
+    const unit = task.schedule.intervalUnit === "seconds" ? t("taskboard.schedule-seconds")
+      : task.schedule.intervalUnit === "minutes" ? t("taskboard.schedule-minutes")
+      : t("taskboard.schedule-hours");
+    return `${t("taskboard.schedule-every")}${task.schedule.intervalValue}${unit}`;
+  }
+  return `${t("taskboard.schedule-at")}${task.schedule.dailyTime}`;
+};
+
 const stepLabel = (task: { id: string }) => {
   const children = taskStore.childrenOf(task.id);
   if (children.length === 0) return "";
@@ -129,6 +170,7 @@ const onDocClick = (e: MouseEvent) => {
   const target = e.target as HTMLElement;
   if (!target.closest(".action-menu") && !target.closest(".action-btn")) {
     openMenuId.value = null;
+    confirmDeleteId.value = null;
   }
 };
 document.addEventListener("click", onDocClick);
@@ -195,6 +237,7 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocClick));
             <span class="status-label" :style="{ color: statusColors[task.status] }">
               {{ t(statusLabels[task.status]) }}
             </span>
+            <span v-if="scheduleLabel(task)" class="schedule-badge">{{ scheduleLabel(task) }}</span>
             <span v-if="stepLabel(task)" class="step-label">{{ stepLabel(task) }}</span>
           </div>
         </div>
@@ -258,7 +301,12 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocClick));
           <span v-if="child.source && renamingId !== child.id" class="source-tag" :class="'source-' + child.source">
             {{ child.source === 'ai' ? t('taskboard.ai-generated') : t('taskboard.user-created') }}
           </span>
-          <button class="child-delete-btn" @click.stop="handleDelete(child.id)">
+          <template v-if="childConfirmDeleteId === child.id">
+            <span class="child-confirm-text">删除?</span>
+            <button class="child-confirm-yes" @click.stop="confirmChildDelete">✓</button>
+            <button class="child-confirm-no" @click.stop="cancelChildDelete">✗</button>
+          </template>
+          <button v-else class="child-delete-btn" @click.stop="handleChildDelete(child.id)">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -272,30 +320,43 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocClick));
     <!-- Fixed-position dropdown -->
     <Teleport to="body">
       <div v-if="openMenuId" class="action-menu" :style="menuStyle" @click.stop>
-        <button class="menu-item" @click="startRename(openMenuId!)">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-          </svg>
-          {{ t("taskboard.rename") }}
-        </button>
-        <button class="menu-item" @click="startAddSubtask(openMenuId!)">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          {{ t("taskboard.add-subtask") }}
-        </button>
-        <button class="menu-item danger" @click="handleDelete(openMenuId!)">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          </svg>
-          {{ t("taskboard.delete") }}
-        </button>
+        <template v-if="confirmDeleteId === openMenuId">
+          <div class="menu-confirm-text">{{ t("taskboard.delete-confirm") }}</div>
+          <div class="menu-confirm-actions">
+            <button class="menu-confirm-btn confirm-yes" @click="confirmDeleteAction">
+              {{ t("taskboard.delete") }}
+            </button>
+            <button class="menu-confirm-btn confirm-no" @click="cancelDelete">
+              {{ t("taskboard.cancel") }}
+            </button>
+          </div>
+        </template>
+        <template v-else>
+          <button class="menu-item" @click="startRename(openMenuId!)">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            {{ t("taskboard.rename") }}
+          </button>
+          <button class="menu-item" @click="startAddSubtask(openMenuId!)">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            {{ t("taskboard.add-subtask") }}
+          </button>
+          <button class="menu-item danger" @click="handleDelete(openMenuId!)">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+            {{ t("taskboard.delete") }}
+          </button>
+        </template>
       </div>
     </Teleport>
   </div>
@@ -439,6 +500,16 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocClick));
   }
 }
 
+.schedule-badge {
+  font-size: 10px;
+  font-family: "JetBrainsMono", monospace;
+  color: #7c5ce7;
+  background-color: #f3f0ff;
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
 .step-label {
   font-size: 11px;
   font-family: "JetBrainsMono", monospace;
@@ -481,6 +552,43 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocClick));
   transition: all 0.15s ease;
 
   &:hover { background-color: #fef0f0; color: #e74c3c; }
+}
+
+.child-confirm-text {
+  font-size: 10px;
+  color: #e74c3c;
+  flex-shrink: 0;
+}
+
+.child-confirm-yes,
+.child-confirm-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  transition: background-color 0.1s ease;
+}
+
+.child-confirm-yes {
+  background-color: #e74c3c;
+  color: #ffffff;
+
+  &:hover { background-color: #c0392b; }
+}
+
+.child-confirm-no {
+  background-color: #e0e0e0;
+  color: #6b6b6b;
+
+  &:hover { background-color: #d0d0d0; }
 }
 
 /* ── Inline subtask input ── */
@@ -602,6 +710,45 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocClick));
     &:hover { background-color: #f0f0f0; }
     &.danger { color: #e74c3c; }
     &.danger:hover { background-color: #fef0f0; }
+  }
+
+  .menu-confirm-text {
+    padding: 6px 14px 4px;
+    font-size: 11px;
+    color: #e74c3c;
+    text-align: center;
+  }
+
+  .menu-confirm-actions {
+    display: flex;
+    gap: 6px;
+    padding: 4px 14px 6px;
+  }
+
+  .menu-confirm-btn {
+    flex: 1;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+
+    &.confirm-yes {
+      background-color: #e74c3c;
+      color: #ffffff;
+
+      &:hover { background-color: #c0392b; }
+    }
+
+    &.confirm-no {
+      background-color: #e0e0e0;
+      color: #6b6b6b;
+
+      &:hover { background-color: #d0d0d0; }
+    }
   }
 }
 </style>

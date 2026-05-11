@@ -15,6 +15,7 @@ const emit = defineEmits<{
 
 const maximized = ref(false);
 const menuOpen = ref(false);
+const confirmDelete = ref(false);
 const renaming = ref(false);
 const renameInput = ref("");
 const renameInputRef = ref<HTMLInputElement>();
@@ -37,6 +38,7 @@ defineExpose({
 
 const toggleMenu = () => {
   menuOpen.value = !menuOpen.value;
+  confirmDelete.value = false;
 };
 
 const startRename = () => {
@@ -62,7 +64,17 @@ const cancelRename = () => {
 };
 
 const handleDelete = () => {
+  confirmDelete.value = true;
+};
+
+const cancelDelete = () => {
+  confirmDelete.value = false;
   menuOpen.value = false;
+};
+
+const confirmDeleteAction = () => {
+  menuOpen.value = false;
+  confirmDelete.value = false;
   emit("close", props.task.id);
 };
 </script>
@@ -113,7 +125,7 @@ const handleDelete = () => {
             <line x1="3" y1="21" x2="10" y2="14" />
           </svg>
         </button>
-        <div class="menu-wrapper" v-click-outside="() => { menuOpen = false }">
+        <div class="menu-wrapper" v-click-outside="() => { menuOpen = false; confirmDelete = false }">
           <button class="card-btn" title="更多操作" @click="toggleMenu">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"
               stroke="none">
@@ -123,8 +135,17 @@ const handleDelete = () => {
             </svg>
           </button>
           <div v-if="menuOpen" class="card-menu">
-            <div class="menu-item" @click="startRename">重命名</div>
-            <div class="menu-item menu-item-danger" @click="handleDelete">删除</div>
+            <template v-if="confirmDelete">
+              <div class="confirm-text">确认删除？</div>
+              <div class="confirm-actions">
+                <button class="confirm-btn confirm-yes" type="button" @click="confirmDeleteAction">删除</button>
+                <button class="confirm-btn confirm-no" type="button" @click="cancelDelete">取消</button>
+              </div>
+            </template>
+            <template v-else>
+              <div class="menu-item" @click.stop="startRename">重命名</div>
+              <div class="menu-item menu-item-danger" @click.stop="handleDelete">删除</div>
+            </template>
           </div>
         </div>
       </div>
@@ -264,6 +285,49 @@ const handleDelete = () => {
 
     &:hover {
       background-color: #4a2020;
+    }
+  }
+
+  .confirm-text {
+    padding: 4px 8px;
+    font-size: 11px;
+    color: #e74c3c;
+    text-align: center;
+  }
+
+  .confirm-actions {
+    display: flex;
+    gap: 4px;
+    padding: 2px 4px 4px;
+  }
+
+  .confirm-btn {
+    flex: 1;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: "JetBrainsMono", monospace;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+  }
+
+  .confirm-yes {
+    background-color: #e74c3c;
+    color: #ffffff;
+
+    &:hover {
+      background-color: #c0392b;
+    }
+  }
+
+  .confirm-no {
+    background-color: #444444;
+    color: #cccccc;
+
+    &:hover {
+      background-color: #555555;
     }
   }
 }

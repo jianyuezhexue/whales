@@ -22,6 +22,8 @@ export function ListKnowledgeFiles(arg1:string,arg2:string):Promise<Array<app.Fi
 
 export function LoadAuiPlugin(arg1:string,arg2:string):Promise<app.AuiPluginAssets>;
 
+export function OpenProjectDirectory(arg1:string):Promise<void>;
+
 export function PtyResize(arg1:string,arg2:number,arg3:number):Promise<void>;
 
 export function PtyStart(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;

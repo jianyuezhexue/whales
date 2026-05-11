@@ -22,6 +22,7 @@ const { t } = useI18n();
 const taskStore = useTaskStore();
 
 const menuOpen = ref(false);
+const confirmDelete = ref(false);
 const renaming = ref(false);
 const renameInput = ref("");
 const renameInputRef = ref<HTMLInputElement>();
@@ -84,6 +85,21 @@ const confirmRename = () => {
 
 const cancelRename = () => {
   renaming.value = false;
+};
+
+const handleDelete = () => {
+  confirmDelete.value = true;
+};
+
+const cancelDelete = () => {
+  confirmDelete.value = false;
+  menuOpen.value = false;
+};
+
+const confirmDeleteAction = () => {
+  menuOpen.value = false;
+  confirmDelete.value = false;
+  emit("delete", props.task.id);
 };
 
 const handleCheckbox = (e: Event) => {
@@ -154,8 +170,8 @@ const handleCheckbox = (e: Event) => {
           <circle cx="12" cy="12" r="3" />
         </svg>
       </button>
-      <div class="menu-wrapper" v-click-outside="() => { menuOpen = false }">
-        <button class="card-btn menu-trigger" @click.stop="menuOpen = !menuOpen">
+      <div class="menu-wrapper" v-click-outside="() => { menuOpen = false; confirmDelete = false }">
+        <button class="card-btn menu-trigger" @click.stop="menuOpen = !menuOpen; confirmDelete = false">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none">
             <circle cx="12" cy="5" r="1.5" />
             <circle cx="12" cy="12" r="1.5" />
@@ -163,10 +179,23 @@ const handleCheckbox = (e: Event) => {
           </svg>
         </button>
         <div v-if="menuOpen" class="card-menu">
-          <div class="menu-item" @click.stop="startRename">{{ t("taskboard.rename") }}</div>
-          <div class="menu-item menu-item-danger" @click.stop="emit('delete', task.id)">
-            {{ t("taskboard.delete") }}
-          </div>
+          <template v-if="confirmDelete">
+            <div class="confirm-text">{{ t("taskboard.delete-confirm") }}</div>
+            <div class="confirm-actions">
+              <button class="confirm-btn confirm-yes" type="button" @click.stop="confirmDeleteAction">
+                {{ t("taskboard.delete") }}
+              </button>
+              <button class="confirm-btn confirm-no" type="button" @click.stop="cancelDelete">
+                {{ t("taskboard.cancel") }}
+              </button>
+            </div>
+          </template>
+          <template v-else>
+            <div class="menu-item" @click.stop="startRename">{{ t("taskboard.rename") }}</div>
+            <div class="menu-item menu-item-danger" @click.stop="handleDelete">
+              {{ t("taskboard.delete") }}
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -401,6 +430,49 @@ const handleCheckbox = (e: Event) => {
 
     &:hover {
       background-color: #fef0f0;
+    }
+  }
+
+  .confirm-text {
+    padding: 4px 8px;
+    font-size: 11px;
+    color: #e74c3c;
+    text-align: center;
+  }
+
+  .confirm-actions {
+    display: flex;
+    gap: 4px;
+    padding: 2px 4px 4px;
+  }
+
+  .confirm-btn {
+    flex: 1;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: "JetBrainsMono", monospace;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+  }
+
+  .confirm-yes {
+    background-color: #e74c3c;
+    color: #ffffff;
+
+    &:hover {
+      background-color: #c0392b;
+    }
+  }
+
+  .confirm-no {
+    background-color: #f0f0f0;
+    color: #6b6b6b;
+
+    &:hover {
+      background-color: #e5e5e5;
     }
   }
 }

@@ -42,6 +42,10 @@ export function LoadAuiPlugin(arg1, arg2) {
   return window['go']['app']['App']['LoadAuiPlugin'](arg1, arg2);
 }
 
+export function OpenProjectDirectory(arg1) {
+  return window['go']['app']['App']['OpenProjectDirectory'](arg1);
+}
+
 export function PtyResize(arg1, arg2, arg3) {
   return window['go']['app']['App']['PtyResize'](arg1, arg2, arg3);
 }

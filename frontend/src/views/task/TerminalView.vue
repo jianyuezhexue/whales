@@ -172,25 +172,19 @@ const clearWorkflow = (e: Event) => {
   e.stopPropagation();
   selectedWorkflowId.value = "";
 };
+
+const columnDropdownOpen = ref(false);
+const toggleColumnDropdown = () => {
+  columnDropdownOpen.value = !columnDropdownOpen.value;
+};
+const selectColumn = (val: string) => {
+  columnMode.value = val;
+  columnDropdownOpen.value = false;
+};
 </script>
 
 <template>
   <div class="terminal-view">
-    <!-- 列数选择器 -->
-    <div class="column-toolbar">
-      <div class="column-tabs">
-        <button
-          v-for="opt in columnOptions"
-          :key="opt.value"
-          :class="['tab-btn', { active: columnMode === opt.value }]"
-          type="button"
-          @click="columnMode = opt.value"
-        >
-          {{ opt.label }}
-        </button>
-      </div>
-    </div>
-
     <!-- 卡片网格 -->
     <div class="task-grid" :style="{ gridTemplateColumns: gridColumns }">
       <TaskCard v-for="task in tasks" :key="task.id" :task="task"
@@ -269,6 +263,33 @@ const clearWorkflow = (e: Event) => {
           </div>
         </div>
 
+        <!-- 列数选择器 -->
+        <div class="input-dropdown column-dropdown" :class="{ open: columnDropdownOpen }"
+          v-click-outside="() => { columnDropdownOpen = false }">
+          <button class="column-trigger" type="button" @click="toggleColumnDropdown"
+            title="列数">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+            </svg>
+            <span>{{ columnMode }}</span>
+          </button>
+          <div v-if="columnDropdownOpen" class="dropdown-popup column-popup">
+            <button
+              v-for="opt in columnOptions"
+              :key="opt.value"
+              :class="['column-opt', { active: columnMode === opt.value }]"
+              type="button"
+              @click="selectColumn(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
+
         <input v-model="inputText" class="task-input" type="text"
           :placeholder="t('taskpage.input-placeholder')"
           @keyup.enter="handleSend" />
@@ -293,45 +314,67 @@ const clearWorkflow = (e: Event) => {
   min-height: 0;
 }
 
-.column-toolbar {
-  display: flex;
-  align-items: center;
-  padding: 4px 12px;
+// ── 列数选择器（输入栏内嵌） ──
+.column-dropdown {
   flex-shrink: 0;
 }
 
-// ── 列数选择器 ──
-.column-tabs {
-  display: flex;
+.column-trigger {
+  display: inline-flex;
   align-items: center;
+  gap: 3px;
+  height: 32px;
+  padding: 0 7px;
   border: 1px solid #e5e5e5;
   border-radius: 6px;
-  overflow: hidden;
+  background-color: #ffffff;
+  color: #6b6b6b;
+  font-size: 12px;
+  font-family: "JetBrainsMono", sans-serif;
+  cursor: pointer;
+  transition: all 0.15s ease;
 
-  .tab-btn {
-    height: 26px;
-    padding: 0 10px;
-    border: none;
-    background-color: #ffffff;
-    color: #6b6b6b;
-    font-size: 12px;
-    font-family: "JetBrainsMono", sans-serif;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    border-right: 1px solid #e5e5e5;
+  &:hover {
+    border-color: #1f1f1f;
+    color: #1f1f1f;
+  }
 
-    &:last-child {
-      border-right: none;
-    }
+  svg {
+    flex-shrink: 0;
+  }
+}
 
-    &:hover {
-      background-color: #f0f0f0;
-    }
+.column-popup {
+  min-width: unset !important;
+  display: flex;
+  gap: 2px;
+  padding: 3px !important;
+}
 
-    &.active {
-      background-color: #1f1f1f;
-      color: #ffffff;
-    }
+.column-opt {
+  width: 28px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #6b6b6b;
+  font-size: 12px;
+  font-family: "JetBrainsMono", sans-serif;
+  cursor: pointer;
+  transition: all 0.1s ease;
+
+  &:hover {
+    background-color: #f0f0f0;
+    color: #1f1f1f;
+  }
+
+  &.active {
+    background-color: #1f1f1f;
+    color: #ffffff;
   }
 }
 

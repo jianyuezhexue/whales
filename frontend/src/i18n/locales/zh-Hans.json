@@ -353,6 +353,14 @@
     "user-created": "手动创建",
     "no-process": "暂无执行过程记录",
     "no-collaboration": "暂无协同信息",
-    "subtask-progress": "子任务进度"
+    "subtask-progress": "子任务进度",
+    "schedule": "定时任务",
+    "schedule-interval": "间隔",
+    "schedule-daily": "每日",
+    "schedule-every": "每隔",
+    "schedule-seconds": "秒",
+    "schedule-minutes": "分钟",
+    "schedule-hours": "小时",
+    "schedule-at": "每天"
   }
 }

@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 import { useProjectStore } from "@/stores/project";
 import type { Project } from "@/stores/project";
 import { useWorkflowStore } from "@/stores/workflow";
-import { SelectDirectory } from "../../../wailsjs/go/app/App";
+import { OpenProjectDirectory, SelectDirectory } from "../../../wailsjs/go/app/App";
 import ConfirmModal from "@/components/ConfirmModal.vue";
 
 const { t } = useI18n();
@@ -108,6 +108,9 @@ const updateProject = () => {
 
 const enterProject = (project: Project) => {
   projectStore.setCurrentProject(project.id);
+  if (project.path) {
+    OpenProjectDirectory(project.path);
+  }
 };
 </script>
 

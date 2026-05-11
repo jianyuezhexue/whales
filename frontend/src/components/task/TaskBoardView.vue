@@ -5,7 +5,7 @@ import { useTaskStore } from "@/stores/task";
 import { useProjectStore } from "@/stores/project";
 import TaskBoardSidebar from "./TaskBoardSidebar.vue";
 import TaskBoardDetail from "./TaskBoardDetail.vue";
-import TaskCreateModal from "./TaskCreateModal.vue";
+import TaskCreateModal, { type ScheduleConfig } from "./TaskCreateModal.vue";
 
 const { t } = useI18n();
 const taskStore = useTaskStore();
@@ -34,13 +34,14 @@ const startBoardAgent = (taskId: string, message: string) => {
   }
 };
 
-const handleCreateConfirm = (name: string, workflowId?: string, workflowName?: string) => {
+const handleCreateConfirm = (name: string, workflowId?: string, workflowName?: string, schedule?: ScheduleConfig) => {
   const task = taskStore.addBoardTask({
     name,
     status: "pending",
     workflowId,
     workflowName,
     agentName: "claude code",
+    schedule: schedule?.enabled ? schedule : undefined,
   });
   taskStore.selectedTaskId = task.id;
   showCreateModal.value = false;

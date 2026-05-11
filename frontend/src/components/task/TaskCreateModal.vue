@@ -7,9 +7,17 @@ defineProps<{
   parentName?: string;
 }>();
 
+export interface ScheduleConfig {
+  enabled: boolean;
+  mode: "interval" | "daily";
+  intervalValue: number;
+  intervalUnit: "seconds" | "minutes" | "hours";
+  dailyTime: string;
+}
+
 const emit = defineEmits<{
   (e: "close"): void;
-  (e: "confirm", name: string, workflowId?: string, workflowName?: string): void;
+  (e: "confirm", name: string, workflowId?: string, workflowName?: string, schedule?: ScheduleConfig): void;
 }>();
 
 const { t } = useI18n();
@@ -23,6 +31,38 @@ const allWorkflows = computed(() => {
     }
   }
   return list;
+});
+
+// Schedule
+const scheduleEnabled = ref(false);
+const scheduleMode = ref<"interval" | "daily">("interval");
+const intervalValue = ref(30);
+const intervalUnit = ref<"seconds" | "minutes" | "hours">("minutes");
+const dailyTime = ref("09:00");
+const dailyDropdownOpen = ref(false);
+
+// 00:00 to 23:30, every 30 minutes
+const dailyTimeOptions = computed(() => {
+  const opts: string[] = [];
+  for (let h = 0; h < 24; h++) {
+    const hh = String(h).padStart(2, "0");
+    opts.push(`${hh}:00`);
+    opts.push(`${hh}:30`);
+  }
+  return opts;
+});
+
+const selectDailyTime = (time: string) => {
+  dailyTime.value = time;
+  dailyDropdownOpen.value = false;
+};
+
+const buildSchedule = (): ScheduleConfig => ({
+  enabled: scheduleEnabled.value,
+  mode: scheduleMode.value,
+  intervalValue: intervalValue.value,
+  intervalUnit: intervalUnit.value,
+  dailyTime: dailyTime.value,
 });
 
 const name = ref("");
@@ -54,9 +94,10 @@ const handleConfirm = () => {
   const trimmed = name.value.trim();
   if (!trimmed) return;
   const wf = allWorkflows.value.find((w) => w.id === selectedWorkflowId.value);
-  emit("confirm", trimmed, selectedWorkflowId.value || undefined, wf?.name);
+  emit("confirm", trimmed, selectedWorkflowId.value || undefined, wf?.name, buildSchedule());
   name.value = "";
   selectedWorkflowId.value = "";
+  scheduleEnabled.value = false;
 };
 
 const onOpened = () => {
@@ -121,6 +162,62 @@ defineExpose({ onOpened });
               :class="{ active: selectedWorkflowId === wf.id }"
               @click="selectWorkflow(wf.id)">
               {{ wf.name }}
+            </div>
+          </div>
+        </div>
+        <!-- 定时任务 -->
+        <div class="schedule-section">
+          <div class="schedule-header" @click="scheduleEnabled = !scheduleEnabled">
+            <span class="schedule-label">{{ t("taskboard.schedule") }}</span>
+            <button type="button" class="toggle-switch" :class="{ on: scheduleEnabled }"
+              @click.stop="scheduleEnabled = !scheduleEnabled">
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+          <div v-if="scheduleEnabled" class="schedule-body">
+            <div class="schedule-mode-tabs">
+              <button type="button" class="mode-tab" :class="{ active: scheduleMode === 'interval' }"
+                @click="scheduleMode = 'interval'">{{ t("taskboard.schedule-interval") }}</button>
+              <button type="button" class="mode-tab" :class="{ active: scheduleMode === 'daily' }"
+                @click="scheduleMode = 'daily'">{{ t("taskboard.schedule-daily") }}</button>
+            </div>
+            <div class="schedule-row">
+              <template v-if="scheduleMode === 'interval'">
+                <span class="schedule-prefix">{{ t("taskboard.schedule-every") }}</span>
+                <input v-model.number="intervalValue" class="schedule-number" type="number" min="1" />
+                <div class="schedule-unit-select">
+                  <button type="button" class="unit-btn" :class="{ active: intervalUnit === 'seconds' }"
+                    @click="intervalUnit = 'seconds'">{{ t("taskboard.schedule-seconds") }}</button>
+                  <button type="button" class="unit-btn" :class="{ active: intervalUnit === 'minutes' }"
+                    @click="intervalUnit = 'minutes'">{{ t("taskboard.schedule-minutes") }}</button>
+                  <button type="button" class="unit-btn" :class="{ active: intervalUnit === 'hours' }"
+                    @click="intervalUnit = 'hours'">{{ t("taskboard.schedule-hours") }}</button>
+                </div>
+              </template>
+              <template v-else>
+                <span class="schedule-prefix">{{ t("taskboard.schedule-at") }}</span>
+                <input v-model="dailyTime" class="schedule-time" type="time" />
+                <div class="daily-dropdown" :class="{ open: dailyDropdownOpen }"
+                  v-click-outside="() => { dailyDropdownOpen = false }">
+                  <button type="button" class="daily-dropdown-toggle" @click="dailyDropdownOpen = !dailyDropdownOpen"
+                    title="选择时间">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
+                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                  <div v-if="dailyDropdownOpen" class="daily-dropdown-popup">
+                    <button
+                      v-for="opt in dailyTimeOptions"
+                      :key="opt"
+                      type="button"
+                      class="daily-time-opt"
+                      :class="{ active: dailyTime === opt }"
+                      @click="selectDailyTime(opt)"
+                    >{{ opt }}</button>
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -321,6 +418,268 @@ defineExpose({ onOpened });
     &.active {
       background-color: #ececec;
       font-weight: 600;
+    }
+  }
+}
+
+// ── 定时任务 ──
+.schedule-section {
+  margin-top: 14px;
+}
+
+.schedule-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.schedule-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f1f1f;
+}
+
+// ── Toggle switch ──
+.toggle-switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background-color: #d0d0d0;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+
+  &.on {
+    background-color: #1f1f1f;
+  }
+
+  .toggle-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease;
+  }
+
+  &.on .toggle-knob {
+    transform: translateX(16px);
+  }
+}
+
+.schedule-body {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  background-color: #fafafa;
+}
+
+.schedule-mode-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 10px;
+  border: 1px solid #e5e5e5;
+  border-radius: 5px;
+  overflow: hidden;
+  background-color: #ffffff;
+
+  .mode-tab {
+    flex: 1;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-right: 1px solid #e5e5e5;
+    background-color: #ffffff;
+    font-size: 12px;
+    font-family: inherit;
+    color: #6b6b6b;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:last-child {
+      border-right: none;
+    }
+
+    &:hover {
+      background-color: #f0f0f0;
+    }
+
+    &.active {
+      background-color: #1f1f1f;
+      color: #ffffff;
+    }
+  }
+}
+
+.schedule-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.schedule-prefix {
+  font-size: 12px;
+  color: #6b6b6b;
+  flex-shrink: 0;
+}
+
+.schedule-number {
+  width: 52px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid #e5e5e5;
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: "JetBrainsMono", monospace;
+  color: #1f1f1f;
+  text-align: center;
+  outline: none;
+  background-color: #ffffff;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: #1f1f1f;
+  }
+
+  // Remove spinner buttons
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  -moz-appearance: textfield;
+}
+
+.schedule-unit-select {
+  display: flex;
+  border: 1px solid #e5e5e5;
+  border-radius: 5px;
+  overflow: hidden;
+  background-color: #ffffff;
+
+  .unit-btn {
+    height: 28px;
+    padding: 0 8px;
+    border: none;
+    border-right: 1px solid #e5e5e5;
+    background-color: #ffffff;
+    font-size: 12px;
+    font-family: inherit;
+    color: #6b6b6b;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:last-child {
+      border-right: none;
+    }
+
+    &:hover {
+      background-color: #f0f0f0;
+    }
+
+    &.active {
+      background-color: #1f1f1f;
+      color: #ffffff;
+    }
+  }
+}
+
+.schedule-time {
+  width: 100px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #e5e5e5;
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: "JetBrainsMono", monospace;
+  color: #1f1f1f;
+  outline: none;
+  background-color: #ffffff;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: #1f1f1f;
+  }
+}
+
+.daily-dropdown {
+  position: relative;
+  flex-shrink: 0;
+
+  .daily-dropdown-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid #e5e5e5;
+    border-radius: 5px;
+    background-color: #ffffff;
+    color: #9a9a9a;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      border-color: #1f1f1f;
+      color: #1f1f1f;
+    }
+  }
+
+  &.open .daily-dropdown-toggle svg {
+    transform: rotate(180deg);
+  }
+
+  .daily-dropdown-popup {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    width: 230px;
+    max-height: 180px;
+    overflow-y: auto;
+    background-color: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    z-index: 10;
+    padding: 4px;
+  }
+
+  .daily-time-opt {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    padding: 0 4px;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    font-size: 11px;
+    font-family: "JetBrainsMono", monospace;
+    color: #6b6b6b;
+    cursor: pointer;
+    transition: all 0.1s ease;
+
+    &:hover {
+      background-color: #f0f0f0;
+      color: #1f1f1f;
+    }
+
+    &.active {
+      background-color: #1f1f1f;
+      color: #ffffff;
     }
   }
 }

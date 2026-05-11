@@ -3,8 +3,10 @@ package app
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	goruntime "runtime"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // StarResult is a trivial return type for StarMe
@@ -24,7 +26,7 @@ func (a *App) StarMe() StarResult {
 
 // SelectDirectory opens a native directory picker dialog
 func (a *App) SelectDirectory() (string, error) {
-	path, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+	path, err := wailsRuntime.OpenDirectoryDialog(a.ctx, wailsRuntime.OpenDialogOptions{
 		Title: "选择项目文件夹",
 	})
 	if err != nil {
@@ -35,10 +37,10 @@ func (a *App) SelectDirectory() (string, error) {
 
 // ExportFile opens a save dialog and writes content to the selected path
 func (a *App) ExportFile(suggestedName string, content string) (string, error) {
-	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+	path, err := wailsRuntime.SaveFileDialog(a.ctx, wailsRuntime.SaveDialogOptions{
 		Title:           "导出文件",
 		DefaultFilename: suggestedName,
-		Filters: []runtime.FileFilter{
+		Filters: []wailsRuntime.FileFilter{
 			{DisplayName: "JSON Files (*.json)", Pattern: "*.json"},
 		},
 	})
@@ -56,9 +58,9 @@ func (a *App) ExportFile(suggestedName string, content string) (string, error) {
 
 // ImportFile opens a file dialog and returns the content of the selected JSON file
 func (a *App) ImportFile() (string, error) {
-	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+	path, err := wailsRuntime.OpenFileDialog(a.ctx, wailsRuntime.OpenDialogOptions{
 		Title: "导入文件",
-		Filters: []runtime.FileFilter{
+		Filters: []wailsRuntime.FileFilter{
 			{DisplayName: "JSON Files (*.json)", Pattern: "*.json"},
 		},
 	})
@@ -73,4 +75,25 @@ func (a *App) ImportFile() (string, error) {
 		return "", err
 	}
 	return string(data), nil
+}
+
+// OpenProjectDirectory opens the given path in the system file manager
+func (a *App) OpenProjectDirectory(path string) error {
+	if path == "" {
+		return fmt.Errorf("project path is empty")
+	}
+	if _, err := os.Stat(path); err != nil {
+		return fmt.Errorf("directory does not exist: %w", err)
+	}
+
+	var cmd *exec.Cmd
+	switch goruntime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", path)
+	case "windows":
+		cmd = exec.Command("explorer", path)
+	default:
+		cmd = exec.Command("xdg-open", path)
+	}
+	return cmd.Start()
 }

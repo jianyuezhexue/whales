@@ -15,6 +15,13 @@ export interface Task {
   resultSummary?: string;
   source?: "user" | "ai";
   executionLog?: string;
+  schedule?: {
+    enabled: boolean;
+    mode: "interval" | "daily";
+    intervalValue: number;
+    intervalUnit: "seconds" | "minutes" | "hours";
+    dailyTime: string;
+  };
 }
 
 export const useTaskStore = defineStore("task", () => {
