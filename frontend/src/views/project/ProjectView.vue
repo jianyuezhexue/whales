@@ -108,6 +108,10 @@ const updateProject = () => {
 
 const enterProject = (project: Project) => {
   projectStore.setCurrentProject(project.id);
+};
+
+const openProjectFolder = (project: Project) => {
+  projectStore.setCurrentProject(project.id);
   if (project.path) {
     OpenProjectDirectory(project.path);
   }
@@ -182,7 +186,7 @@ const enterProject = (project: Project) => {
         <div class="card-footer">
           <span class="card-date">{{ formatDate(project.createdAt) }}</span>
           <div class="card-actions">
-            <button class="card-action-btn" type="button" @click.stop="enterProject(project)"
+            <button class="card-action-btn" type="button" @click.stop="openProjectFolder(project)"
               :title="t('projectpage.enter')">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">

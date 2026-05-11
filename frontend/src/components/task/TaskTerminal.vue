@@ -2,7 +2,9 @@
 import { ref, onMounted, onBeforeUnmount, onActivated, nextTick } from 'vue';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
+import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime';
 import { useTaskStore } from '@/stores/task';
 
 const props = defineProps<{
@@ -77,6 +79,16 @@ onMounted(async () => {
 
   fitAddon = new FitAddon();
   terminal.loadAddon(fitAddon);
+
+  const webLinksAddon = new WebLinksAddon((_event, uri) => {
+    try {
+      BrowserOpenURL(uri);
+    } catch {
+      // Fallback for dev mode (no Wails runtime)
+      window.open(uri, '_blank', 'noopener,noreferrer');
+    }
+  });
+  terminal.loadAddon(webLinksAddon);
 
   if (terminalContainer.value) {
     terminal.open(terminalContainer.value);

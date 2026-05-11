@@ -6,7 +6,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
+  (e: 'update:modelValue', value: boolean): void
 }>()
 
 const createActiveTab = ref<'chat' | 'spec' | 'preview'>('chat')
