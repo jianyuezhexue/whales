@@ -7,6 +7,7 @@ import { useTaskStore } from '@/stores/task';
 
 const props = defineProps<{
   taskId: string;
+  initialOutput?: string;
 }>();
 
 const emit = defineEmits<{
@@ -32,8 +33,8 @@ const doFit = () => {
   if (!dims || !dims.cols || !dims.rows) return;
   try {
     const win = window as any;
-    if (win.go?.main?.App?.PtyResize) {
-      win.go.main.App.PtyResize(props.taskId, dims.cols, dims.rows);
+    if (win.go?.app?.App?.PtyResize) {
+      win.go.app.App.PtyResize(props.taskId, dims.cols, dims.rows);
     }
   } catch {
     // Wails not available (dev mode)
@@ -82,6 +83,12 @@ onMounted(async () => {
     doFit();
   }
 
+  // Replay accumulated output before subscribing to live events,
+  // so switching back to a running task restores its scrollback.
+  if (props.initialOutput) {
+    terminal.write(props.initialOutput);
+  }
+
   // Subscribe to PTY events via the store's event bus (not raw Wails EventsOn).
   // The store registers Wails listeners once; individual terminals sub/unsub
   // safely through the bus without cross-contamination.
@@ -105,8 +112,8 @@ onMounted(async () => {
   terminal.onData((data: string) => {
     try {
       const win = window as any;
-      if (win.go?.main?.App?.PtyWrite) {
-        win.go.main.App.PtyWrite(props.taskId, data);
+      if (win.go?.app?.App?.PtyWrite) {
+        win.go.app.App.PtyWrite(props.taskId, data);
       }
     } catch {
       // Wails not available (dev mode)

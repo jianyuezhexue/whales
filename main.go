@@ -1,6 +1,7 @@
 package main
 
 import (
+	"changeme/app"
 	"embed"
 	"log"
 
@@ -21,11 +22,9 @@ var icon []byte
 
 func main() {
 	// Create an instance of the app structure
-	// 创建一个App结构体实例
-	app := NewApp()
+	appInstance := app.NewApp()
 
 	// Create application with options
-	// 使用选项创建应用
 	err := wails.Run(&options.App{
 		Title:             "whales",
 		Width:             1200,
@@ -43,10 +42,10 @@ func main() {
 		Menu:              nil,
 		Logger:            nil,
 		LogLevel:          logger.DEBUG,
-		OnStartup:         app.startup,
-		OnDomReady:        app.domReady,
-		OnBeforeClose:     app.beforeClose,
-		OnShutdown:        app.shutdown,
+		OnStartup:         appInstance.Startup,
+		OnDomReady:        appInstance.DomReady,
+		OnBeforeClose:     appInstance.BeforeClose,
+		OnShutdown:        appInstance.Shutdown,
 		WindowStartState:  options.Normal,
 		AssetServer: &assetserver.Options{
 			Assets:     assets,
@@ -54,10 +53,9 @@ func main() {
 			Middleware: nil,
 		},
 		Bind: []interface{}{
-			app,
+			appInstance,
 		},
 		// Windows platform specific options
-		// Windows平台特定选项
 		Windows: &windows.Options{
 			WebviewIsTransparent:              true,
 			WindowIsTranslucent:               false,
@@ -68,7 +66,6 @@ func main() {
 			Theme:                             windows.SystemDefault,
 		},
 		// Mac platform specific options
-		// Mac平台特定选项
 		Mac: &mac.Options{
 			TitleBar: &mac.TitleBar{
 				TitlebarAppearsTransparent: true,
@@ -82,8 +79,8 @@ func main() {
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
 			About: &mac.AboutInfo{
-				Title:   "Wails Template Vue",
-				Message: "A Wails template based on Vue and Vue-Router",
+				Title:   "Whales",
+				Message: "Multi-Agent Collaboration System",
 				Icon:    icon,
 			},
 		},

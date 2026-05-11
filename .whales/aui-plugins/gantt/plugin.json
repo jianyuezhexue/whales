@@ -1,0 +1,32 @@
+{
+  "id": "gantt",
+  "name": "甘特图",
+  "version": "1.0.0",
+  "author": "Whales Team",
+  "description": "项目进度甘特图渲染器，支持任务时间线、进度追踪和依赖关系展示",
+  "icon": "📊",
+  "category": "chart",
+  "tags": ["项目管理", "时间线", "进度"],
+  "entry": "renderer.js",
+  "style": "renderer.css",
+  "dataSchema": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "required": ["title", "startDate", "endDate"],
+      "properties": {
+        "title": { "type": "string", "title": "任务名称" },
+        "startDate": { "type": "string", "format": "date", "title": "开始日期" },
+        "endDate": { "type": "string", "format": "date", "title": "结束日期" },
+        "progress": { "type": "number", "title": "进度(%)" },
+        "color": { "type": "string", "title": "颜色" }
+      }
+    }
+  },
+  "sampleData": [
+    { "title": "需求分析", "startDate": "2025-01-01", "endDate": "2025-01-15", "progress": 100, "color": "#6366f1" },
+    { "title": "技术方案", "startDate": "2025-01-10", "endDate": "2025-01-25", "progress": 60, "color": "#8b5cf6" },
+    { "title": "开发实现", "startDate": "2025-01-20", "endDate": "2025-02-15", "progress": 30, "color": "#0ea5e9" },
+    { "title": "测试验收", "startDate": "2025-02-10", "endDate": "2025-02-28", "progress": 0, "color": "#14b8a6" }
+  ]
+}

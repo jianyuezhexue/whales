@@ -1,12 +1,12 @@
 import type { KnowledgeFile } from "@/types/knowledge"
 
 // Dynamically import Wails bindings
-let wailsApp: typeof import("../../wailsjs/go/main/App") | null = null
+let wailsApp: typeof import("../../wailsjs/go/app/App") | null = null
 
 async function getWailsApp() {
   if (wailsApp) return wailsApp
   try {
-    wailsApp = await import("../../wailsjs/go/main/App")
+    wailsApp = await import("../../wailsjs/go/app/App")
     return wailsApp
   } catch {
     return null

@@ -1,5 +1,53 @@
-export namespace main {
+export namespace app {
 	
+	export class AuiPluginAssets {
+	    js: string;
+	    css: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AuiPluginAssets(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.js = source["js"];
+	        this.css = source["css"];
+	    }
+	}
+	export class AuiPluginMeta {
+	    id: string;
+	    name: string;
+	    version: string;
+	    author: string;
+	    description: string;
+	    icon: string;
+	    category: string;
+	    tags: string[];
+	    dataSchema: Record<string, any>;
+	    sampleData: any;
+	    entry: string;
+	    style: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AuiPluginMeta(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.version = source["version"];
+	        this.author = source["author"];
+	        this.description = source["description"];
+	        this.icon = source["icon"];
+	        this.category = source["category"];
+	        this.tags = source["tags"];
+	        this.dataSchema = source["dataSchema"];
+	        this.sampleData = source["sampleData"];
+	        this.entry = source["entry"];
+	        this.style = source["style"];
+	    }
+	}
 	export class FileInfo {
 	    name: string;
 	    path: string;
@@ -18,6 +66,44 @@ export namespace main {
 	        this.isDir = source["isDir"];
 	        this.size = source["size"];
 	        this.modTime = source["modTime"];
+	    }
+	}
+	export class MarketPlugin {
+	    id: string;
+	    name: string;
+	    version: string;
+	    author: string;
+	    description: string;
+	    icon: string;
+	    category: string;
+	    tags: string[];
+	    price: string;
+	    downloads: number;
+	    rating: number;
+	    dataSchema: Record<string, any>;
+	    sampleData: any;
+	    screenshot: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new MarketPlugin(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.version = source["version"];
+	        this.author = source["author"];
+	        this.description = source["description"];
+	        this.icon = source["icon"];
+	        this.category = source["category"];
+	        this.tags = source["tags"];
+	        this.price = source["price"];
+	        this.downloads = source["downloads"];
+	        this.rating = source["rating"];
+	        this.dataSchema = source["dataSchema"];
+	        this.sampleData = source["sampleData"];
+	        this.screenshot = source["screenshot"];
 	    }
 	}
 	export class StarResult {

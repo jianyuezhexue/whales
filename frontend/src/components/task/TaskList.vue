@@ -27,7 +27,7 @@ const statusLabels: Record<string, string> = {
 
 const statusColors: Record<string, string> = {
   pending: "#9a9a9a",
-  running: "#3498db",
+  running: "#1f1f1f",
   completed: "#27ae60",
   failed: "#e74c3c",
 };

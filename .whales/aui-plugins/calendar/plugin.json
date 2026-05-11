@@ -1,0 +1,30 @@
+{
+  "id": "calendar",
+  "name": "日历视图",
+  "version": "1.0.0",
+  "author": "Whales Team",
+  "description": "日历视图渲染器，支持日程安排、事件标注和日期区间展示",
+  "icon": "🗓",
+  "category": "chart",
+  "tags": ["日历", "日程", "时间管理"],
+  "entry": "renderer.js",
+  "style": "renderer.css",
+  "dataSchema": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "required": ["title", "date"],
+      "properties": {
+        "title": { "type": "string", "title": "事件标题" },
+        "date": { "type": "string", "format": "date", "title": "日期" },
+        "color": { "type": "string", "title": "标记颜色" },
+        "desc": { "type": "string", "title": "事件描述" }
+      }
+    }
+  },
+  "sampleData": [
+    { "title": "项目评审", "date": "2025-01-20", "color": "#ef4444", "desc": "第一阶段评审会议" },
+    { "title": "版本发布", "date": "2025-02-01", "color": "#10b981", "desc": "v1.0 正式发布" },
+    { "title": "团队建设", "date": "2025-02-15", "color": "#f59e0b", "desc": "季度团建活动" }
+  ]
+}
