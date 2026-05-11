@@ -2,7 +2,6 @@
 import { ref, onMounted, onBeforeUnmount, onActivated, nextTick } from 'vue';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
 import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime';
 import { useTaskStore } from '@/stores/task';
@@ -22,10 +21,6 @@ let terminal: Terminal | null = null;
 let fitAddon: FitAddon | null = null;
 let unsubscribe: (() => void) | null = null;
 
-// Event-driven fit: parent components (TaskCard, TaskView) call this on
-// concrete events (column change, maximize toggle, window resize). No
-// ResizeObserver — that fired fit() repeatedly during layout transitions
-// and made characters appear to shimmer across multiple terminals.
 const doFit = () => {
   if (!fitAddon || !terminal || !terminalContainer.value) return;
   const el = terminalContainer.value;
@@ -44,6 +39,22 @@ const doFit = () => {
 };
 
 defineExpose({ fit: doFit });
+
+const openUrl = (uri: string) => {
+  try { BrowserOpenURL(uri); }
+  catch { window.open(uri, '_blank', 'noopener,noreferrer'); }
+};
+
+// Wrap URLs in OSC 8 escape sequences so xterm renders them as clickable
+// hyperlinks. xterm handles all pixel→character mapping internally; we just
+// need to annotate the data stream with the URL ranges.
+const urlRegex = /https?:\/\/[^\s\x00-\x1f"'!*(){}|\\\^<>`]*[^\s\x00-\x1f"':,.!?{}|\\\^~\[\]`()<>]/gi;
+
+const wrapUrlsWithOsc8 = (data: string): string => {
+  return data.replace(urlRegex, (uri) =>
+    `\x1b]8;;${uri}\x07${uri}\x1b]8;;\x07`
+  );
+};
 
 onMounted(async () => {
   await nextTick();
@@ -77,37 +88,30 @@ onMounted(async () => {
     allowProposedApi: true,
   });
 
+  // Handle OSC 8 hyperlinks. xterm fires this when a user clicks on a link
+  // that was wrapped in OSC 8 escape sequences in the data stream.
+  terminal.options = {
+    linkHandler: {
+      activate: (_event, text) => { openUrl(text); },
+    },
+  };
+
   fitAddon = new FitAddon();
   terminal.loadAddon(fitAddon);
-
-  const webLinksAddon = new WebLinksAddon((_event, uri) => {
-    try {
-      BrowserOpenURL(uri);
-    } catch {
-      // Fallback for dev mode (no Wails runtime)
-      window.open(uri, '_blank', 'noopener,noreferrer');
-    }
-  });
-  terminal.loadAddon(webLinksAddon);
 
   if (terminalContainer.value) {
     terminal.open(terminalContainer.value);
     doFit();
   }
 
-  // Replay accumulated output before subscribing to live events,
-  // so switching back to a running task restores its scrollback.
   if (props.initialOutput) {
-    terminal.write(props.initialOutput);
+    terminal.write(wrapUrlsWithOsc8(props.initialOutput));
   }
 
-  // Subscribe to PTY events via the store's event bus (not raw Wails EventsOn).
-  // The store registers Wails listeners once; individual terminals sub/unsub
-  // safely through the bus without cross-contamination.
   unsubscribe = taskStore.subscribe(
     props.taskId,
     (data: string) => {
-      terminal?.write(data);
+      terminal?.write(wrapUrlsWithOsc8(data));
     },
     () => {
       if (terminal) {
@@ -120,7 +124,6 @@ onMounted(async () => {
     },
   );
 
-  // Send keystrokes to Go backend
   terminal.onData((data: string) => {
     try {
       const win = window as any;
@@ -132,12 +135,9 @@ onMounted(async () => {
     }
   });
 
-  // Focus the terminal
   terminal.focus();
 });
 
-// keep-alive: re-fit when DOM is reattached so the terminal matches the
-// (possibly new) container size. fit() never fires on its own anymore.
 onActivated(() => {
   nextTick(doFit);
 });
