@@ -2,14 +2,22 @@
 import { ref, computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
-import { useWorkflowStore, ALL_SKILLS, ALL_AGENTS, ALL_AUIS, ALL_EXECUTION_MODES } from "@/stores/workflow";
+import { useWorkflowStore, ALL_SKILLS, ALL_AGENTS, ALL_EXECUTION_MODES, BUILTIN_AUI_OPTIONS, getAllAuiOptions, resolveAuiName } from "@/stores/workflow";
 import type { WorkflowNode } from "@/stores/workflow";
+import { useAuiStore } from "@/stores/aui";
+import { useAuiPluginStore } from "@/stores/auiPlugin";
 import ConfirmModal from "@/components/ConfirmModal.vue";
+import AuiRenderer from "@/components/aui/AuiRenderer.vue";
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const store = useWorkflowStore();
+const auiStore = useAuiStore();
+const pluginStore = useAuiPluginStore();
+
+// Computed AUI options combining built-in + instances + plugins
+const auiOptions = computed(() => getAllAuiOptions(auiStore.auiList, pluginStore.installedPlugins));
 
 // --- Load group from route ---
 onMounted(() => {
@@ -71,6 +79,8 @@ const editedDesc = ref("");
 const editedContent = ref("");
 const editedSkills = ref<string[]>([]);
 const editedAgents = ref<string[]>([]);
+const editedAuiId = ref("");
+const editedRequireAudit = ref(false);
 const editedExecutionMode = ref("default");
 const editorSkillDropdownOpen = ref(false);
 const editorAgentDropdownOpen = ref(false);
@@ -84,6 +94,53 @@ const deletingWorkflowName = ref("");
 
 // --- Drag state ---
 const dragNodeId = ref<string | null>(null);
+
+// --- Gantt Test Modal ---
+const showGanttTestModal = ref(false);
+const ganttTestViewMode = ref<"rendered" | "json">("rendered");
+
+// Hardcoded Gantt plugin data so the test button always works
+const GANTT_DATA_SCHEMA = {
+  type: "array",
+  items: {
+    type: "object",
+    required: ["title", "startDate", "endDate"],
+    properties: {
+      title: { type: "string", title: "任务名称" },
+      startDate: { type: "string", format: "date", title: "开始日期" },
+      endDate: { type: "string", format: "date", title: "结束日期" },
+      progress: { type: "number", title: "进度(%)" },
+      color: { type: "string", title: "颜色" },
+    },
+  },
+};
+
+const GANTT_SAMPLE_DATA = [
+  { title: "需求分析", startDate: "2025-01-01", endDate: "2025-01-15", progress: 100, color: "#6366f1" },
+  { title: "技术方案", startDate: "2025-01-10", endDate: "2025-01-25", progress: 60, color: "#8b5cf6" },
+  { title: "开发实现", startDate: "2025-01-20", endDate: "2025-02-15", progress: 30, color: "#0ea5e9" },
+  { title: "测试验收", startDate: "2025-02-10", endDate: "2025-02-28", progress: 0, color: "#14b8a6" },
+];
+
+const ganttTestAui = {
+  id: "gantt",
+  name: "甘特图",
+  description: "项目进度甘特图渲染器",
+  rendererType: "gantt",
+  fields: [],
+  jsonSchema: GANTT_DATA_SCHEMA,
+  sampleData: GANTT_SAMPLE_DATA,
+  aiPrompt: "",
+  createdAt: "",
+  updatedAt: "",
+};
+
+function openGanttTestModal() {
+  // Ensure the gantt plugin JS is injected into the DOM
+  pluginStore.injectPlugin("gantt");
+  ganttTestViewMode.value = "rendered";
+  showGanttTestModal.value = true;
+}
 
 // --- Computed ---
 const filteredWorkflows = computed(() => {
@@ -155,6 +212,8 @@ function openNodeEditor(node: WorkflowNode) {
   editedContent.value = node.content;
   editedSkills.value = [...node.skills];
   editedAgents.value = [...node.agents];
+  editedAuiId.value = node.aui ?? "";
+  editedRequireAudit.value = node.requireAudit ?? false;
   editedExecutionMode.value = node.executionMode ?? "default";
   showNodeEditorModal.value = true;
 }
@@ -167,6 +226,8 @@ function saveNodeEditor() {
     content: editedContent.value.trim(),
     skills: editedSkills.value,
     agents: editedAgents.value,
+    aui: editedAuiId.value || undefined,
+    requireAudit: editedRequireAudit.value || undefined,
     executionMode: editedExecutionMode.value || undefined,
   });
   showNodeEditorModal.value = false;
@@ -284,7 +345,7 @@ function agentName(id: string) {
 }
 
 function auiName(id: string) {
-  return ALL_AUIS.find((a) => a.id === id);
+  return resolveAuiName(id, auiStore.auiList, pluginStore.installedPlugins);
 }
 
 function executionModeName(id: string) {
@@ -411,6 +472,17 @@ function toggleNewAgent(agentId: string) {
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
               {{ t("workflowpage.run") }}
+            </button>
+            <button class="wf-canvas-btn wf-canvas-btn-gantt" type="button"
+              @click="openGanttTestModal">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="9" y="14" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="2" height="7" rx="1" />
+              </svg>
+              {{ t("workflowpage.test-gantt") }}
             </button>
           </div>
         </div>
@@ -641,9 +713,11 @@ function toggleNewAgent(agentId: string) {
               <label class="form-label">{{ t("workflowpage.result-display") }}</label>
               <select v-model="newNodeAuiId" class="form-input form-select">
                 <option value="">{{ t("workflowpage.result-display-placeholder") }}</option>
-                <option v-for="aui in ALL_AUIS" :key="aui.id" :value="aui.id">
-                  {{ aui.name }}
-                </option>
+                <optgroup v-for="grp in ['builtin', 'instance', 'plugin']" :key="grp" :label="grp === 'builtin' ? t('aui.builtin') : grp === 'instance' ? t('aui.custom') : t('aui.plugin')">
+                  <option v-for="opt in auiOptions.filter(o => o.group === grp)" :key="opt.id" :value="opt.id">
+                    {{ opt.name }}
+                  </option>
+                </optgroup>
               </select>
             </div>
             <!-- Require Audit -->
@@ -793,6 +867,28 @@ function toggleNewAgent(agentId: string) {
             </select>
             </div>
           </div>
+          <!-- AUI display -->
+          <div class="form-field">
+            <label class="form-label">{{ t("workflowpage.result-display") }}</label>
+            <select v-model="editedAuiId" class="form-input form-select">
+              <option value="">{{ t("workflowpage.result-display-placeholder") }}</option>
+              <optgroup v-for="grp in ['builtin', 'instance', 'plugin']" :key="grp" :label="grp === 'builtin' ? t('aui.builtin') : grp === 'instance' ? t('aui.custom') : t('aui.plugin')">
+                <option v-for="opt in auiOptions.filter(o => o.group === grp)" :key="opt.id" :value="opt.id">
+                  {{ opt.name }}
+                </option>
+              </optgroup>
+            </select>
+          </div>
+          <!-- Require Audit -->
+          <div class="form-field form-field-inline">
+            <label class="form-label">{{ t("workflowpage.require-audit") }}</label>
+            <label class="toggle-switch">
+              <input v-model="editedRequireAudit" type="checkbox" class="toggle-input" />
+              <span class="toggle-track">
+                <span class="toggle-thumb"></span>
+              </span>
+            </label>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-cancel" type="button" @click="cancelNodeEditor">
@@ -801,6 +897,52 @@ function toggleNewAgent(agentId: string) {
           <button class="btn btn-confirm" type="button" @click="saveNodeEditor">
             {{ t("workflowpage.confirm") }}
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gantt Test Modal -->
+    <div v-if="showGanttTestModal" class="modal-overlay" @click.self="showGanttTestModal = false">
+      <div class="modal-panel gantt-test-modal">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="9" y="14" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="2" height="7" rx="1" />
+            </svg>
+            <span class="modal-node-name">{{ t("workflowpage.test-gantt") }}</span>
+          </div>
+          <div class="modal-actions">
+            <button
+              :class="['view-toggle-btn', { active: ganttTestViewMode === 'rendered' }]"
+              @click="ganttTestViewMode = 'rendered'"
+            >
+              {{ t("taskboard.view-rendered") }}
+            </button>
+            <button
+              :class="['view-toggle-btn', { active: ganttTestViewMode === 'json' }]"
+              @click="ganttTestViewMode = 'json'"
+            >
+              JSON
+            </button>
+            <button class="close-btn" @click="showGanttTestModal = false">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div v-if="ganttTestViewMode === 'rendered'" class="render-area">
+            <AuiRenderer :aui="ganttTestAui" :data="GANTT_SAMPLE_DATA" />
+          </div>
+          <div v-else-if="ganttTestViewMode === 'json'" class="json-area">
+            <pre class="json-block">{{ JSON.stringify(GANTT_SAMPLE_DATA, null, 2) }}</pre>
+          </div>
         </div>
       </div>
     </div>
@@ -1888,6 +2030,167 @@ function toggleNewAgent(agentId: string) {
 
   .toggle-input:checked + .toggle-track & {
     transform: translateX(16px);
+  }
+}
+
+// Gantt test modal
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.gantt-test-modal {
+  width: 800px;
+  max-height: 80vh;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-panel {
+  &.gantt-test-modal {
+    // specificity handled above
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e5e5;
+  flex-shrink: 0;
+}
+
+.modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #6b6b6b;
+}
+
+.modal-node-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f1f1f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.view-toggle-btn {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  background: #ffffff;
+  font-size: 11px;
+  font-family: "JetBrainsMono", sans-serif;
+  color: #6b6b6b;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover:not(:disabled) {
+    border-color: #1f1f1f;
+    color: #1f1f1f;
+  }
+
+  &.active {
+    background-color: #1f1f1f;
+    color: #ffffff;
+    border-color: #1f1f1f;
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+}
+
+.close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #9a9a9a;
+  cursor: pointer;
+  margin-left: 4px;
+
+  &:hover {
+    background-color: #f0f0f0;
+    color: #1f1f1f;
+  }
+}
+
+.modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.render-area {
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  padding: 16px;
+}
+
+.json-area {
+  padding: 16px;
+  background-color: #fafafa;
+  min-height: 300px;
+}
+
+.json-block {
+  font-size: 12px;
+  font-family: "JetBrainsMono", monospace;
+  color: #1f1f1f;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.no-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 8px;
+  color: #9a9a9a;
+  font-size: 13px;
+}
+
+// Gantt button style
+.wf-canvas-btn-gantt {
+  // inherits wf-canvas-btn, distinct color hint
+  &:hover:not(:disabled) {
+    border-color: #6366f1;
+    color: #6366f1;
   }
 }
 </style>

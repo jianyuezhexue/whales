@@ -184,7 +184,8 @@
     "back-to-groups": "Back",
     "result-display": "Result Display",
     "result-display-placeholder": "None",
-    "require-audit": "Require Audit"
+    "require-audit": "Require Audit",
+    "test-gantt": "Test Gantt"
   },
   "knowledgepage": {
     "title": "Knowledge Management",
@@ -287,6 +288,11 @@
     "title": "Task Management",
     "input-placeholder": "Enter task description, press Enter to send..."
   },
+  "aui": {
+    "builtin": "Built-in Renderers",
+    "custom": "Custom AUI",
+    "plugin": "AUI Plugins"
+  },
   "taskboard": {
     "new-task": "New Task",
     "add-subtask": "Add Subtask",
@@ -297,8 +303,8 @@
     "create": "Create",
     "delete": "Delete",
     "rename": "Rename",
-    "task-name": "Task Name",
-    "task-name-placeholder": "Enter task name",
+    "task-name": "Task Instruction",
+    "task-name-placeholder": "Enter task instruction",
     "no-task-selected": "Select a task to view details",
     "no-task-hint": "Select a task from the left panel, or click \"New Task\" to create one",
     "no-subtasks": "No subtasks",
@@ -320,6 +326,7 @@
     "ai-generated": "AI Decomposed",
     "user-created": "Manual",
     "no-process": "No execution process recorded",
+    "view-rendered": "View Rendered",
     "no-collaboration": "No collaboration data",
     "subtask-progress": "Subtask Progress",
     "schedule": "Schedule",
@@ -329,6 +336,9 @@
     "schedule-seconds": "sec",
     "schedule-minutes": "min",
     "schedule-hours": "hr",
-    "schedule-at": "At"
+    "schedule-at": "At",
+    "back-to-process": "Back to Process",
+    "view-json": "View JSON",
+    "workflow-progress": "Workflow Progress"
   }
 }

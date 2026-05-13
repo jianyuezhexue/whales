@@ -2,6 +2,19 @@ import { ref, computed } from "vue";
 import { defineStore } from "pinia";
 import { EventsOn } from "../../wailsjs/runtime/runtime";
 
+export interface TaskNodeResult {
+  nodeId: string;
+  nodeName: string;
+  auiId?: string;           // AUI ref (e.g. "builtin:table" | "instance:<uuid>" | "plugin:<id>")
+  auiData?: any;            // Parsed structured data for AUI rendering
+  rawOutput?: string;       // Raw agent output text
+  outputFilePath?: string;  // Path to result data file
+  status: "pending" | "running" | "completed" | "failed";
+  startedAt?: string;
+  completedAt?: string;
+  durationMs?: number;      // Execution duration in milliseconds
+}
+
 export interface Task {
   id: string;
   name: string;
@@ -22,6 +35,9 @@ export interface Task {
     intervalUnit: "seconds" | "minutes" | "hours";
     dailyTime: string;
   };
+  // Workflow execution state
+  nodeResults?: TaskNodeResult[];
+  currentNodeIndex?: number;
 }
 
 export const useTaskStore = defineStore("task", () => {
@@ -111,6 +127,31 @@ export const useTaskStore = defineStore("task", () => {
     const task = boardTasks.value.find((t) => t.id === taskId);
     if (!task || !task.parentId) return;
     task.status = task.status === "completed" ? "pending" : "completed";
+  }
+
+  // ── Node result helpers ──
+  function initNodeResults(taskId: string, nodes: { id: string; name: string; aui?: string }[]) {
+    const task = boardTasks.value.find((t) => t.id === taskId);
+    if (!task) return;
+    task.nodeResults = nodes.map((n) => ({
+      nodeId: n.id,
+      nodeName: n.name,
+      auiId: n.aui,
+      status: "pending" as const,
+    }));
+    task.currentNodeIndex = 0;
+  }
+
+  function updateNodeResult(taskId: string, nodeId: string, updates: Partial<TaskNodeResult>) {
+    const task = boardTasks.value.find((t) => t.id === taskId);
+    if (!task || !task.nodeResults) return;
+    const nr = task.nodeResults.find((n) => n.nodeId === nodeId);
+    if (nr) Object.assign(nr, updates);
+  }
+
+  function getNodeResult(taskId: string, nodeId: string): TaskNodeResult | undefined {
+    const task = boardTasks.value.find((t) => t.id === taskId);
+    return task?.nodeResults?.find((n) => n.nodeId === nodeId);
   }
 
   // Board-specific PTY subscription helpers
@@ -215,6 +256,9 @@ export const useTaskStore = defineStore("task", () => {
     updateBoardTask,
     addSubTask,
     toggleSubTaskDone,
+    initNodeResults,
+    updateNodeResult,
+    getNodeResult,
     subscribeBoard,
     unsubscribeBoard,
   };

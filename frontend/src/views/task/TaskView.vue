@@ -4,8 +4,8 @@ export default { name: 'TaskView' };
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
 import { useTaskStore } from "@/stores/task";
-import TerminalView from "./TerminalView.vue";
-import TaskBoardView from "@/components/task/TaskBoardView.vue";
+import TerminalView from "./components/TerminalView.vue";
+import TaskBoardView from "./components/TaskBoardView.vue";
 
 const { t } = useI18n();
 const taskStore = useTaskStore();

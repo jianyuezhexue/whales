@@ -2,13 +2,19 @@
 import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import { useWorkflowStore, ALL_SKILLS, ALL_AGENTS, ALL_AUIS, ALL_EXECUTION_MODES } from "@/stores/workflow";
+import { useWorkflowStore, ALL_SKILLS, ALL_AGENTS, ALL_EXECUTION_MODES, getAllAuiOptions, resolveAuiName } from "@/stores/workflow";
 import type { WorkflowNode } from "@/stores/workflow";
+import { useAuiStore } from "@/stores/aui";
+import { useAuiPluginStore } from "@/stores/auiPlugin";
 import ConfirmModal from "@/components/ConfirmModal.vue";
 
 const { t } = useI18n();
 const router = useRouter();
 const store = useWorkflowStore();
+const auiStore = useAuiStore();
+const pluginStore = useAuiPluginStore();
+
+const auiOptions = computed(() => getAllAuiOptions(auiStore.auiList, pluginStore.installedPlugins));
 
 // Search
 const searchQuery = ref("");
@@ -47,7 +53,8 @@ function agentName(id: string) {
   return ALL_AGENTS.find((a) => a.id === id);
 }
 function auiName(id: string) {
-  return ALL_AUIS.find((a) => a.id === id);
+  const name = resolveAuiName(id, auiStore.auiList, pluginStore.installedPlugins);
+  return name ? { id, name } : undefined;
 }
 function executionModeName(id: string) {
   return ALL_EXECUTION_MODES.find((m) => m.id === id);
@@ -347,9 +354,11 @@ function onDeleteConfirm() {
             <label class="form-label">{{ t("workflowpage.result-display") }}</label>
             <select v-model="editAuiId" class="form-input form-select">
               <option value="">{{ t("workflowpage.result-display-placeholder") }}</option>
-              <option v-for="aui in ALL_AUIS" :key="aui.id" :value="aui.id">
-                {{ aui.name }}
-              </option>
+              <optgroup v-for="grp in ['builtin', 'instance', 'plugin']" :key="grp" :label="grp === 'builtin' ? t('aui.builtin') : grp === 'instance' ? t('aui.custom') : t('aui.plugin')">
+                <option v-for="opt in auiOptions.filter(o => o.group === grp)" :key="opt.id" :value="opt.id">
+                  {{ opt.name }}
+                </option>
+              </optgroup>
             </select>
           </div>
           <!-- Require Audit -->

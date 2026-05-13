@@ -11,8 +11,15 @@ const props = defineProps<{
   data?: any
 }>()
 
+const emit = defineEmits<{
+  (e: 'ready'): void
+  (e: 'error', message: string): void
+}>()
+
 const pluginStore = useAuiPluginStore()
 const containerRef = ref<HTMLElement | null>(null)
+const isPluginReady = ref(false)
+const pluginErrorMessage = ref<string | null>(null)
 const renderData = computed(() => props.data ?? props.aui.sampleData)
 
 const BUILTIN_RENDERERS = new Set(["table", "browser-preview", "todo"])
@@ -34,26 +41,47 @@ const rendererComponent = computed(() => {
 
 let pluginElement: HTMLElement | null = null
 
+async function waitForCustomElement(tag: string, timeoutMs = 8000): Promise<boolean> {
+  if (customElements.get(tag)) return true
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    await new Promise((r) => setTimeout(r, 150))
+    if (customElements.get(tag)) return true
+  }
+  return false
+}
+
 async function mountPluginRenderer() {
   if (!isPluginRenderer.value || !containerRef.value) return
 
   const tag = `aui-${props.aui.rendererType}`
+  isPluginReady.value = false
+  pluginErrorMessage.value = null
 
-  // Ensure plugin JS/CSS is injected
-  await pluginStore.injectPlugin(props.aui.rendererType)
+  try {
+    await pluginStore.injectPlugin(props.aui.rendererType)
 
-  // Check if the custom element is registered
-  if (!customElements.get(tag)) return
+    const registered = await waitForCustomElement(tag)
+    if (!registered) {
+      pluginErrorMessage.value = `Custom element <${tag}> not registered`
+      emit("error", pluginErrorMessage.value)
+      return
+    }
 
-  // Remove previous element
-  if (pluginElement && pluginElement.parentNode) {
-    pluginElement.parentNode.removeChild(pluginElement)
+    if (pluginElement && pluginElement.parentNode) {
+      pluginElement.parentNode.removeChild(pluginElement)
+    }
+
+    pluginElement = document.createElement(tag)
+    containerRef.value.innerHTML = ""
+    containerRef.value.appendChild(pluginElement)
+    ;(pluginElement as any).data = renderData.value
+    isPluginReady.value = true
+    emit("ready")
+  } catch (err: any) {
+    pluginErrorMessage.value = err?.message ?? "Plugin load failed"
+    emit("error", pluginErrorMessage.value ?? "Plugin load failed")
   }
-
-  pluginElement = document.createElement(tag)
-  containerRef.value.innerHTML = ""
-  containerRef.value.appendChild(pluginElement)
-  ;(pluginElement as any).data = renderData.value
 }
 
 function updatePluginData() {

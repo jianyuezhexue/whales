@@ -191,24 +191,17 @@ const showCreateModal = ref(false)
         <div v-for="plugin in pluginStore.installedPlugins" :key="plugin.id" class="plugin-card">
           <div class="plugin-icon">{{ plugin.icon }}</div>
           <div class="plugin-body">
-            <div class="plugin-name">{{ plugin.name }}</div>
-            <div class="plugin-desc">{{ plugin.description }}</div>
-            <div class="plugin-meta">
-              <span class="plugin-version">v{{ plugin.version }}</span>
-              <span class="plugin-category">{{ plugin.category }}</span>
-              <span class="plugin-meta-spacer"></span>
-              <button class="plugin-preview-btn" title="预览" @click="openPreview(plugin)">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              </button>
+            <div class="card-head">
+              <div class="plugin-name">{{ plugin.name }}</div>
+              <div class="head-actions">
+                <button class="btn-sm btn-preview" @click="openPreview(plugin)">预览</button>
+                <button class="btn-sm btn-uninstall" @click="onUninstallPlugin(plugin.id)">卸载</button>
+              </div>
             </div>
-          </div>
-          <div class="plugin-actions">
-            <button class="plugin-btn plugin-btn-uninstall" @click="onUninstallPlugin(plugin.id)">
-              卸载
-            </button>
+            <div class="plugin-desc">{{ plugin.description }}</div>
+            <div class="plugin-footer">
+              <span class="plugin-category">{{ plugin.category }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -239,31 +232,33 @@ const showCreateModal = ref(false)
         <div v-for="plugin in filteredMarketPlugins" :key="plugin.id" class="plugin-card">
           <div class="plugin-icon">{{ plugin.icon }}</div>
           <div class="plugin-body">
-            <div class="plugin-name">{{ plugin.name }}</div>
+            <div class="card-head">
+              <div class="plugin-name">{{ plugin.name }}</div>
+              <div class="head-actions">
+                <button class="btn-sm btn-preview" @click="openPreview(plugin)">预览</button>
+                <button
+                  v-if="pluginStore.isInstalled(plugin.id)"
+                  class="btn-sm btn-installed"
+                  disabled
+                >
+                  已安装
+                </button>
+                <button
+                  v-else
+                  class="btn-sm btn-install"
+                  :disabled="installingId === plugin.id"
+                  @click="onInstallPlugin(plugin.id)"
+                >
+                  {{ installingId === plugin.id ? '安装中...' : '安装' }}
+                </button>
+              </div>
+            </div>
             <div class="plugin-desc">{{ plugin.description }}</div>
-            <div class="plugin-meta">
-              <span class="plugin-version">v{{ plugin.version }}</span>
+            <div class="plugin-footer">
               <span class="plugin-downloads">{{ plugin.downloads }} 次下载</span>
               <span v-if="plugin.rating" class="plugin-rating">★ {{ plugin.rating }}</span>
               <span class="plugin-price">{{ plugin.price }}</span>
             </div>
-          </div>
-          <div class="plugin-actions">
-            <button
-              v-if="pluginStore.isInstalled(plugin.id)"
-              class="plugin-btn plugin-btn-installed"
-              disabled
-            >
-              已安装
-            </button>
-            <button
-              v-else
-              class="plugin-btn plugin-btn-install"
-              :disabled="installingId === plugin.id"
-              @click="onInstallPlugin(plugin.id)"
-            >
-              {{ installingId === plugin.id ? '安装中...' : '安装' }}
-            </button>
           </div>
         </div>
       </div>
@@ -273,7 +268,7 @@ const showCreateModal = ref(false)
     <div v-if="showPreviewModal && previewPlugin" class="modal-overlay" @click.self="showPreviewModal = false">
       <div class="preview-panel">
         <div class="preview-header">
-          <div class="preview-title">{{ previewPlugin.icon }} {{ previewPlugin.name }} - 预览</div>
+          <div class="preview-title">{{ previewPlugin.icon }} {{ previewPlugin.name }} <span class="preview-version">v{{ previewPlugin.version }}</span></div>
           <div class="preview-toggle">
             <button
               :class="['preview-toggle-btn', { active: previewMode === 'data' }]"
@@ -482,11 +477,65 @@ const showCreateModal = ref(false)
   min-width: 0;
 }
 
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
 .plugin-name {
   font-size: 14px;
   font-weight: 600;
   color: #1f1f1f;
-  margin-bottom: 4px;
+}
+
+.head-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+// Small top-right buttons
+.btn-sm {
+  height: 22px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: "JetBrainsMono", sans-serif;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &.btn-preview {
+    background: transparent;
+    color: #9a9a9a;
+
+    &:hover { color: #1f1f1f; background: #f0f0f0; }
+  }
+
+  &.btn-install {
+    background-color: #1f1f1f;
+    color: #ffffff;
+
+    &:hover { opacity: 0.85; }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+  }
+
+  &.btn-installed {
+    background-color: #f0f0f0;
+    color: #9a9a9a;
+    cursor: default;
+  }
+
+  &.btn-uninstall {
+    background-color: #1f1f1f;
+    color: #ffffff;
+
+    &:hover { opacity: 0.85; }
+  }
 }
 
 .plugin-desc {
@@ -501,18 +550,15 @@ const showCreateModal = ref(false)
   margin-bottom: 6px;
 }
 
-.plugin-meta {
+.plugin-footer {
   display: flex;
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px solid #f0f0f0;
 }
 
-.plugin-meta-spacer {
-  flex: 1;
-}
-
-.plugin-version,
 .plugin-downloads,
 .plugin-rating,
 .plugin-price,
@@ -520,11 +566,6 @@ const showCreateModal = ref(false)
   font-size: 11px;
   padding: 1px 8px;
   border-radius: 10px;
-}
-
-.plugin-version {
-  background: #f0f0f0;
-  color: #6b6b6b;
 }
 
 .plugin-category {
@@ -545,65 +586,6 @@ const showCreateModal = ref(false)
 .plugin-price {
   background: #f0f5ff;
   color: #2563eb;
-}
-
-.plugin-preview-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: 1px solid #e5e5e5;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #9a9a9a;
-  cursor: pointer;
-  transition: all 0.15s;
-  flex-shrink: 0;
-
-  &:hover {
-    border-color: #1f1f1f;
-    color: #1f1f1f;
-    background: #fafafa;
-  }
-}
-
-.plugin-actions {
-  display: flex;
-  align-items: flex-start;
-  flex-shrink: 0;
-}
-
-.plugin-btn {
-  height: 28px;
-  padding: 0 14px;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  font-family: "JetBrainsMono", sans-serif;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  &.plugin-btn-install {
-    background-color: #1f1f1f;
-    color: #ffffff;
-
-    &:hover { opacity: 0.85; }
-    &:disabled { opacity: 0.4; cursor: not-allowed; }
-  }
-
-  &.plugin-btn-installed {
-    background-color: #f0f0f0;
-    color: #9a9a9a;
-    cursor: default;
-  }
-
-  &.plugin-btn-uninstall {
-    background-color: #1f1f1f;
-    color: #ffffff;
-
-    &:hover { opacity: 0.85; }
-  }
 }
 
 // ── Modal overlay ──────────────────────────────────────
@@ -646,6 +628,17 @@ const showCreateModal = ref(false)
   font-size: 15px;
   font-weight: 600;
   color: #1f1f1f;
+}
+
+.preview-version {
+  font-size: 11px;
+  font-weight: 400;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: #f0f0f0;
+  color: #6b6b6b;
+  margin-left: 6px;
+  vertical-align: middle;
 }
 
 .preview-close {

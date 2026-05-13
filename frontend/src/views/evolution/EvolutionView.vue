@@ -22,11 +22,24 @@ interface EvolutionItem {
   chatMessages: ChatMessage[];
 }
 
+interface PainPoint {
+  id: string;
+  title: string;
+  problem: string;
+  scenario: string;
+  createdAt: number;
+}
+
 const formatDate = (timestamp: number) => {
   const d = new Date(timestamp);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 };
 
+// --- Tab ---
+type TabKey = "suggestions" | "painpoints";
+const activeTab = ref<TabKey>("suggestions");
+
+// --- Evolution (suggestions) ---
 const items = ref<EvolutionItem[]>([
   {
     id: "1",
@@ -140,7 +153,6 @@ const sendChatMessage = () => {
   chattingItem.value.chatMessages.push({ role: "user", content: chatInput.value.trim() });
   chatInput.value = "";
   scrollChatToBottom();
-  // Simulate AI response
   setTimeout(() => {
     if (chattingItem.value) {
       chattingItem.value.chatMessages.push({
@@ -181,7 +193,6 @@ const onAdoptCancel = () => {
   adoptingItem.value = null;
 };
 
-// Type label
 const statusLabel = (status: string) => {
   switch (status) {
     case "pending":
@@ -192,6 +203,45 @@ const statusLabel = (status: string) => {
       return { text: status, class: "" };
   }
 };
+
+// --- Pain points ---
+const painPoints = ref<PainPoint[]>([]);
+
+const showPainPointModal = ref(false);
+const painPointForm = ref({ title: "", problem: "", scenario: "" });
+
+const openPainPointModal = () => {
+  painPointForm.value = { title: "", problem: "", scenario: "" };
+  showPainPointModal.value = true;
+};
+
+const submitPainPoint = () => {
+  if (!painPointForm.value.title.trim() || !painPointForm.value.problem.trim()) return;
+  painPoints.value.unshift({
+    id: `pp-${Date.now()}`,
+    title: painPointForm.value.title.trim(),
+    problem: painPointForm.value.problem.trim(),
+    scenario: painPointForm.value.scenario.trim(),
+    createdAt: Date.now(),
+  });
+  showPainPointModal.value = false;
+};
+
+const showPainPointDeleteModal = ref(false);
+const deletingPainPointId = ref<string | null>(null);
+
+const confirmDeletePainPoint = (id: string) => {
+  deletingPainPointId.value = id;
+  showPainPointDeleteModal.value = true;
+};
+
+const onPainPointDeleteConfirm = () => {
+  if (deletingPainPointId.value) {
+    painPoints.value = painPoints.value.filter((p) => p.id !== deletingPainPointId.value);
+  }
+  showPainPointDeleteModal.value = false;
+  deletingPainPointId.value = null;
+};
 </script>
 
 <template>
@@ -200,88 +250,62 @@ const statusLabel = (status: string) => {
     <div class="page-header">
       <h1 class="page-title">{{ t("menu.evolution") }}</h1>
       <div class="header-actions">
-        <div class="status-tabs">
+        <div class="view-toggle">
           <button
-            :class="['tab-btn', { active: statusFilter === 'all' }]"
-            type="button"
-            @click="statusFilter = 'all'"
+            :class="['toggle-btn', { active: activeTab === 'suggestions' }]"
+            :title="t('evolutionpage.tab-suggestions')"
+            @click="activeTab = 'suggestions'"
           >
-            全部
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+              <path d="M21 21v-5h-5" />
+            </svg>
           </button>
           <button
-            :class="['tab-btn', { active: statusFilter === 'pending' }]"
-            type="button"
-            @click="statusFilter = 'pending'"
+            :class="['toggle-btn', { active: activeTab === 'painpoints' }]"
+            :title="t('evolutionpage.tab-painpoints')"
+            @click="activeTab = 'painpoints'"
           >
-            待采纳
-          </button>
-          <button
-            :class="['tab-btn', { active: statusFilter === 'adopted' }]"
-            type="button"
-            @click="statusFilter = 'adopted'"
-          >
-            已采纳
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
           </button>
         </div>
-      </div>
-    </div>
-
-    <!-- Empty state -->
-    <div v-if="items.length === 0" class="empty-state">
-      <svg
-        viewBox="0 0 24 24"
-        width="48"
-        height="48"
-        fill="none"
-        stroke="#d0d0d0"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-      </svg>
-      <div class="empty-title">暂无优化建议</div>
-      <div class="empty-subtitle">AI 在对话过程中会自动沉淀优化建议到此处</div>
-    </div>
-
-    <!-- List view -->
-    <div v-else class="evolution-list">
-      <div class="list-header">
-        <span class="col-suggestion">优化建议</span>
-        <span class="col-problem">解决问题</span>
-        <span class="col-source">关联任务</span>
-        <span class="col-status">状态</span>
-        <span class="col-action">操作</span>
-      </div>
-      <div
-        v-for="item in filteredItems"
-        :key="item.id"
-        class="list-row"
-      >
-        <span class="col-suggestion">
-          <div class="suggestion-text">{{ item.suggestion }}</div>
-        </span>
-        <span class="col-problem">
-          <div class="problem-text">{{ item.problem }}</div>
-        </span>
-        <span class="col-source">
-          <div class="source-info">
-            <span class="source-name">{{ item.sourceTaskName }}</span>
-            <span class="source-date">{{ formatDate(item.createdAt) }}</span>
+        <!-- Suggestions tab header actions -->
+        <template v-if="activeTab === 'suggestions'">
+          <div class="status-tabs">
+            <button
+              :class="['tab-btn', { active: statusFilter === 'all' }]"
+              type="button"
+              @click="statusFilter = 'all'"
+            >
+              全部
+            </button>
+            <button
+              :class="['tab-btn', { active: statusFilter === 'pending' }]"
+              type="button"
+              @click="statusFilter = 'pending'"
+            >
+              待采纳
+            </button>
+            <button
+              :class="['tab-btn', { active: statusFilter === 'adopted' }]"
+              type="button"
+              @click="statusFilter = 'adopted'"
+            >
+              已采纳
+            </button>
           </div>
-        </span>
-        <span class="col-status">
-          <span :class="['status-tag', statusLabel(item.status).class]">
-            {{ statusLabel(item.status).text }}
-          </span>
-        </span>
-        <span class="col-action">
-          <button
-            v-if="item.status !== 'adopted'"
-            class="action-btn action-chat"
-            type="button"
-            @click="openChatModal(item)"
-          >
+        </template>
+        <!-- Painpoints tab header actions -->
+        <template v-if="activeTab === 'painpoints'">
+          <button class="pain-point-btn" type="button" @click="openPainPointModal">
             <svg
               viewBox="0 0 24 24"
               width="14"
@@ -292,55 +316,208 @@ const statusLabel = (status: string) => {
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            <span>采纳对话</span>
+            <span>{{ t("evolutionpage.btn-pain-point") }}</span>
           </button>
-          <button
-            v-if="item.status !== 'adopted'"
-            class="action-btn action-adopt"
-            type="button"
-            @click="confirmAdopt(item)"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="14"
-              height="14"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            <span>确定采纳</span>
-          </button>
-          <span v-else class="adopted-label">
-            <svg
-              viewBox="0 0 24 24"
-              width="14"
-              height="14"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            已升级
-          </span>
-        </span>
+        </template>
       </div>
     </div>
+
+    <!-- ==================== Suggestions tab ==================== -->
+    <template v-if="activeTab === 'suggestions'">
+      <!-- Empty state -->
+      <div v-if="items.length === 0" class="empty-state">
+        <svg
+          viewBox="0 0 24 24"
+          width="48"
+          height="48"
+          fill="none"
+          stroke="#d0d0d0"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+        <div class="empty-title">{{ t("evolutionpage.empty-title") }}</div>
+        <div class="empty-subtitle">{{ t("evolutionpage.empty-subtitle") }}</div>
+      </div>
+
+      <!-- List view -->
+      <div v-else class="evolution-list">
+        <div class="list-header">
+          <span class="col-suggestion">{{ t("evolutionpage.col-suggestion") }}</span>
+          <span class="col-problem">{{ t("evolutionpage.col-problem") }}</span>
+          <span class="col-source">{{ t("evolutionpage.col-source") }}</span>
+          <span class="col-status">{{ t("evolutionpage.col-status") }}</span>
+          <span class="col-action">{{ t("evolutionpage.col-action") }}</span>
+        </div>
+        <div
+          v-for="item in filteredItems"
+          :key="item.id"
+          class="list-row"
+        >
+          <span class="col-suggestion">
+            <div class="suggestion-text">{{ item.suggestion }}</div>
+          </span>
+          <span class="col-problem">
+            <div class="problem-text">{{ item.problem }}</div>
+          </span>
+          <span class="col-source">
+            <div class="source-info">
+              <span class="source-name">{{ item.sourceTaskName }}</span>
+              <span class="source-date">{{ formatDate(item.createdAt) }}</span>
+            </div>
+          </span>
+          <span class="col-status">
+            <span :class="['status-tag', statusLabel(item.status).class]">
+              {{ statusLabel(item.status).text }}
+            </span>
+          </span>
+          <span class="col-action">
+            <button
+              v-if="item.status !== 'adopted'"
+              class="action-btn action-chat"
+              type="button"
+              @click="openChatModal(item)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              <span>{{ t("evolutionpage.btn-chat") }}</span>
+            </button>
+            <button
+              v-if="item.status !== 'adopted'"
+              class="action-btn action-adopt"
+              type="button"
+              @click="confirmAdopt(item)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>{{ t("evolutionpage.btn-adopt") }}</span>
+            </button>
+            <span v-else class="adopted-label">
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              {{ t("evolutionpage.btn-adopted") }}
+            </span>
+          </span>
+        </div>
+      </div>
+    </template>
+
+    <!-- ==================== Pain points tab ==================== -->
+    <template v-if="activeTab === 'painpoints'">
+      <!-- Empty state -->
+      <div v-if="painPoints.length === 0" class="empty-state">
+        <svg
+          viewBox="0 0 24 24"
+          width="48"
+          height="48"
+          fill="none"
+          stroke="#d0d0d0"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="12" y1="18" x2="12" y2="12" />
+          <line x1="9" y1="15" x2="15" y2="15" />
+        </svg>
+        <div class="empty-title">{{ t("evolutionpage.pain-point-empty-title") }}</div>
+        <div class="empty-subtitle">{{ t("evolutionpage.pain-point-empty-subtitle") }}</div>
+      </div>
+
+      <!-- List view -->
+      <div v-else class="pain-point-list">
+        <div class="list-header">
+          <span class="col-title">{{ t("evolutionpage.pain-point-col-title") }}</span>
+          <span class="col-problem">{{ t("evolutionpage.pain-point-col-problem") }}</span>
+          <span class="col-scenario">{{ t("evolutionpage.pain-point-col-scenario") }}</span>
+          <span class="col-date">{{ t("evolutionpage.pain-point-col-date") }}</span>
+          <span class="col-action">{{ t("evolutionpage.pain-point-col-action") }}</span>
+        </div>
+        <div
+          v-for="item in painPoints"
+          :key="item.id"
+          class="list-row"
+        >
+          <span class="col-title">
+            <div class="title-text">{{ item.title }}</div>
+          </span>
+          <span class="col-problem">
+            <div class="problem-text">{{ item.problem }}</div>
+          </span>
+          <span class="col-scenario">
+            <div class="scenario-text">{{ item.scenario || "-" }}</div>
+          </span>
+          <span class="col-date">
+            <span class="date-text">{{ formatDate(item.createdAt) }}</span>
+          </span>
+          <span class="col-action">
+            <button
+              class="action-btn action-delete"
+              type="button"
+              @click="confirmDeletePainPoint(item.id)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              <span>{{ t("evolutionpage.pain-point-btn-delete") }}</span>
+            </button>
+          </span>
+        </div>
+      </div>
+    </template>
 
     <!-- Chat modal -->
     <div v-if="showChatModal" class="modal-overlay" @click.self="showChatModal = false">
       <div class="modal-panel chat-panel">
-        <div class="modal-title">采纳对话</div>
+        <div class="modal-title">{{ t("evolutionpage.chat-title") }}</div>
         <div class="chat-context">
-          <div class="context-label">优化建议</div>
+          <div class="context-label">{{ t("evolutionpage.chat-context-label") }}</div>
           <div class="context-text">{{ chattingItem?.suggestion }}</div>
         </div>
         <div class="chat-body" ref="chatBodyRef">
@@ -350,7 +527,7 @@ const statusLabel = (status: string) => {
             :class="['chat-message', msg.role === 'ai' ? 'msg-ai' : 'msg-user']"
           >
             <div class="msg-bubble">
-              <div class="msg-role">{{ msg.role === "ai" ? "AI" : "你" }}</div>
+              <div class="msg-role">{{ msg.role === "ai" ? t("evolutionpage.ai-label") : t("evolutionpage.you-label") }}</div>
               <div class="msg-content">{{ msg.content }}</div>
             </div>
           </div>
@@ -359,7 +536,7 @@ const statusLabel = (status: string) => {
           <textarea
             v-model="chatInput"
             class="chat-input"
-            :placeholder="`输入你的想法，与 AI 讨论优化方案...`"
+            :placeholder="t('evolutionpage.chat-placeholder')"
             rows="2"
             @keydown="handleChatKeydown"
           ></textarea>
@@ -369,12 +546,12 @@ const statusLabel = (status: string) => {
             :disabled="!chatInput.trim()"
             @click="sendChatMessage"
           >
-            发送
+            {{ t("evolutionpage.chat-send") }}
           </button>
         </div>
         <div class="modal-footer">
           <button class="btn btn-cancel" type="button" @click="showChatModal = false">
-            关闭
+            {{ t("evolutionpage.chat-close") }}
           </button>
           <button
             v-if="chattingItem?.status !== 'adopted'"
@@ -385,7 +562,72 @@ const statusLabel = (status: string) => {
               confirmAdopt(chattingItem!);
             "
           >
-            确定采纳
+            {{ t("evolutionpage.btn-adopt") }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pain point add modal -->
+    <div v-if="showPainPointModal" class="modal-overlay" @click.self="showPainPointModal = false">
+      <div class="modal-panel form-panel">
+        <div class="modal-title">{{ t("evolutionpage.pain-point-modal-title") }}</div>
+        <div class="form-body">
+          <div class="form-field">
+            <label class="form-label">{{ t("evolutionpage.pain-point-field-title") }} <span class="required">*</span></label>
+            <input
+              v-model="painPointForm.title"
+              class="form-input"
+              type="text"
+              :placeholder="t('evolutionpage.pain-point-title-placeholder')"
+            />
+          </div>
+          <div class="form-field">
+            <label class="form-label">{{ t("evolutionpage.pain-point-field-problem") }} <span class="required">*</span></label>
+            <textarea
+              v-model="painPointForm.problem"
+              class="form-textarea"
+              rows="3"
+              :placeholder="t('evolutionpage.pain-point-problem-placeholder')"
+            ></textarea>
+          </div>
+          <div class="form-field">
+            <label class="form-label">{{ t("evolutionpage.pain-point-field-scenario") }}</label>
+            <textarea
+              v-model="painPointForm.scenario"
+              class="form-textarea"
+              rows="2"
+              :placeholder="t('evolutionpage.pain-point-scenario-placeholder')"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-cancel" type="button" @click="showPainPointModal = false">
+            {{ t("evolutionpage.pain-point-cancel") }}
+          </button>
+          <button
+            class="btn btn-confirm"
+            type="button"
+            :disabled="!painPointForm.title.trim() || !painPointForm.problem.trim()"
+            @click="submitPainPoint"
+          >
+            {{ t("evolutionpage.pain-point-submit") }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pain point delete confirm modal -->
+    <div v-if="showPainPointDeleteModal" class="modal-overlay" @click.self="showPainPointDeleteModal = false">
+      <div class="modal-panel confirm-panel">
+        <div class="modal-title">{{ t("evolutionpage.pain-point-delete-confirm-title") }}</div>
+        <div class="confirm-body">{{ t("evolutionpage.pain-point-delete-confirm-msg") }}</div>
+        <div class="modal-footer">
+          <button class="btn btn-cancel" type="button" @click="showPainPointDeleteModal = false">
+            {{ t("evolutionpage.pain-point-cancel") }}
+          </button>
+          <button class="btn btn-danger" type="button" @click="onPainPointDeleteConfirm">
+            {{ t("evolutionpage.pain-point-confirm-delete") }}
           </button>
         </div>
       </div>
@@ -394,9 +636,9 @@ const statusLabel = (status: string) => {
     <!-- Adopt confirm modal -->
     <ConfirmModal
       v-if="showAdoptModal"
-      :title="'确认采纳优化'"
-      :message="`确定要采纳此优化建议吗？采纳后将自动升级对应的技能或工作流。\n\n「${adoptingItem?.suggestion}」`"
-      confirm-text="确定采纳"
+      :title="t('evolutionpage.adopt-confirm-title')"
+      :message="`${t('evolutionpage.adopt-confirm-msg')}\n\n「${adoptingItem?.suggestion}」`"
+      :confirm-text="t('evolutionpage.btn-adopt')"
       :danger="false"
       @confirm="onAdoptConfirm"
       @cancel="onAdoptCancel"
@@ -413,6 +655,45 @@ const statusLabel = (status: string) => {
   }
 }
 
+// Tab toggle
+.view-toggle {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  .toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    background-color: #ffffff;
+    color: #9a9a9a;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:first-child {
+      border-right: 1px solid #e5e5e5;
+    }
+
+    &:hover {
+      background-color: #f0f0f0;
+      color: #1f1f1f;
+    }
+
+    &.active {
+      background-color: #1f1f1f;
+      color: #ffffff;
+    }
+  }
+}
+
+// Status tabs (suggestions)
 .status-tabs {
   display: flex;
   align-items: center;
@@ -447,6 +728,28 @@ const statusLabel = (status: string) => {
   }
 }
 
+.pain-point-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 6px;
+  background-color: #1f1f1f;
+  color: #ffffff;
+  font-size: 12px;
+  font-family: "JetBrainsMono", sans-serif;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  white-space: nowrap;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+// Shared empty state
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -468,7 +771,9 @@ const statusLabel = (status: string) => {
   }
 }
 
-.evolution-list {
+// Shared list
+.evolution-list,
+.pain-point-list {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -498,7 +803,10 @@ const statusLabel = (status: string) => {
       background-color: #fafafa;
     }
   }
+}
 
+// Evolution list columns
+.evolution-list {
   .col-suggestion {
     flex: 3;
     min-width: 0;
@@ -602,6 +910,108 @@ const statusLabel = (status: string) => {
   }
 }
 
+// Pain point list columns
+.pain-point-list {
+  .col-title {
+    flex: 2;
+    min-width: 0;
+    padding-right: 12px;
+
+    .title-text {
+      font-size: 13px;
+      color: #1f1f1f;
+      line-height: 1.5;
+      font-weight: 500;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .list-header & {
+      font-weight: 600;
+      color: #9a9a9a;
+    }
+  }
+
+  .col-problem {
+    flex: 3;
+    min-width: 0;
+    padding-right: 12px;
+
+    .problem-text {
+      font-size: 13px;
+      color: #4a4a4a;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .list-header & {
+      font-weight: 600;
+      color: #9a9a9a;
+    }
+  }
+
+  .col-scenario {
+    flex: 2;
+    min-width: 0;
+    padding-right: 12px;
+
+    .scenario-text {
+      font-size: 13px;
+      color: #6b6b6b;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .list-header & {
+      font-weight: 600;
+      color: #9a9a9a;
+    }
+  }
+
+  .col-date {
+    flex: 0 0 140px;
+    display: flex;
+    align-items: flex-start;
+    padding-top: 2px;
+
+    .date-text {
+      font-size: 12px;
+      color: #9a9a9a;
+    }
+
+    .list-header & {
+      font-weight: 600;
+      color: #9a9a9a;
+      align-items: center;
+      padding-top: 0;
+    }
+  }
+
+  .col-action {
+    flex: 0 0 80px;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    justify-content: flex-end;
+
+    .list-header & {
+      font-weight: 600;
+      color: #9a9a9a;
+    }
+  }
+}
+
 .status-tag {
   display: inline-flex;
   align-items: center;
@@ -658,6 +1068,17 @@ const statusLabel = (status: string) => {
       opacity: 0.85;
     }
   }
+
+  &.action-delete {
+    border: 1px solid #e5e5e5;
+    background-color: #ffffff;
+    color: #1f1f1f;
+
+    &:hover {
+      background-color: #f5f5f5;
+      border-color: #d0d0d0;
+    }
+  }
 }
 
 .adopted-label {
@@ -669,7 +1090,7 @@ const statusLabel = (status: string) => {
   font-family: "JetBrainsMono", sans-serif;
 }
 
-// Chat modal
+// Modal
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -711,6 +1132,7 @@ const statusLabel = (status: string) => {
   }
 }
 
+// Chat modal
 .chat-context {
   margin: 16px 24px 0;
   padding: 10px 12px;
@@ -856,6 +1278,89 @@ const statusLabel = (status: string) => {
   }
 }
 
+// Pain point form modal
+.form-panel {
+  width: 480px;
+
+  .form-body {
+    padding: 16px 24px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #4a4a4a;
+
+      .required {
+        color: #e74c3c;
+      }
+    }
+
+    .form-input {
+      height: 32px;
+      padding: 0 10px;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: "JetBrainsMono", sans-serif;
+      color: #1f1f1f;
+      background-color: #ffffff;
+      outline: none;
+      transition: border-color 0.15s ease;
+
+      &:focus {
+        border-color: #1f1f1f;
+      }
+
+      &::placeholder {
+        color: #c0c0c0;
+      }
+    }
+
+    .form-textarea {
+      padding: 8px 10px;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: "JetBrainsMono", sans-serif;
+      color: #1f1f1f;
+      background-color: #ffffff;
+      outline: none;
+      resize: vertical;
+      line-height: 1.5;
+      transition: border-color 0.15s ease;
+
+      &:focus {
+        border-color: #1f1f1f;
+      }
+
+      &::placeholder {
+        color: #c0c0c0;
+      }
+    }
+  }
+}
+
+// Confirmation modal
+.confirm-panel {
+  width: 400px;
+
+  .confirm-body {
+    padding: 12px 24px 4px;
+    font-size: 13px;
+    color: #4a4a4a;
+    line-height: 1.6;
+  }
+}
+
 .btn {
   height: 32px;
   padding: 0 16px;
@@ -878,6 +1383,21 @@ const statusLabel = (status: string) => {
   &.btn-confirm {
     border: none;
     background-color: #1f1f1f;
+    color: #ffffff;
+
+    &:hover {
+      opacity: 0.85;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  &.btn-danger {
+    border: none;
+    background-color: #e74c3c;
     color: #ffffff;
 
     &:hover {

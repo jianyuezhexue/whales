@@ -1,5 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
+import type { AuiInstance } from "@/types/aui";
+import type { AuiPluginMeta } from "@/stores/auiPlugin";
 
 // ============ Interfaces ============
 export interface WorkflowNodeSkill {
@@ -55,6 +57,21 @@ export interface WorkflowGroup {
   createdAt: number;
 }
 
+// AUI reference types — used to categorize what an aui ID points to
+// Format: "builtin:table" | "instance:<uuid>" | "plugin:<id>"
+export const AUI_REF_PREFIX = {
+  BUILTIN: "builtin:",
+  INSTANCE: "instance:",
+  PLUGIN: "plugin:",
+} as const;
+
+// Built-in renderers that can be selected as node output
+export const BUILTIN_AUI_OPTIONS: WorkflowNodeAui[] = [
+  { id: "builtin:table", name: "数据表格", color: "#6366f1" },
+  { id: "builtin:browser-preview", name: "浏览器预览", color: "#0ea5e9" },
+  { id: "builtin:todo", name: "任务代办", color: "#14b8a6" },
+];
+
 // ============ Constants ============
 export const ALL_SKILLS: WorkflowNodeSkill[] = [
   { id: "s1", name: "代码生成", color: "#6366f1" },
@@ -74,20 +91,103 @@ export const ALL_AGENTS: WorkflowNodeAgent[] = [
   { id: "a4", name: "ArchMaster", color: "#ef4444" },
 ];
 
-export const ALL_AUIS: WorkflowNodeAui[] = [
-  { id: "aui1", name: "表格展示", color: "#6366f1" },
-  { id: "aui2", name: "图表展示", color: "#8b5cf6" },
-  { id: "aui3", name: "卡片展示", color: "#0ea5e9" },
-  { id: "aui4", name: "JSON 展示", color: "#14b8a6" },
-  { id: "aui5", name: "文本展示", color: "#f59e0b" },
-  { id: "aui6", name: "对话展示", color: "#ef4444" },
-];
+/** @deprecated Use getAllAuiOptions() instead for real AUI data */
+export const ALL_AUIS: WorkflowNodeAui[] = BUILTIN_AUI_OPTIONS;
 
 export const ALL_EXECUTION_MODES: WorkflowExecutionMode[] = [
   { id: "sequential", name: "顺序" },
   { id: "loop", name: "循环" },
   { id: "default", name: "默认顺序" },
 ];
+
+// ============ AUI Resolution Helpers ============
+
+export interface AuiOption {
+  id: string;       // "builtin:table" | "instance:<uuid>" | "plugin:<id>"
+  name: string;
+  group: "builtin" | "instance" | "plugin";
+}
+
+/** Build combined AUI options list from real AUI instances and installed plugins. */
+export function getAllAuiOptions(
+  auiInstances: AuiInstance[],
+  installedPlugins: AuiPluginMeta[],
+): AuiOption[] {
+  const builtins: AuiOption[] = BUILTIN_AUI_OPTIONS.map((a) => ({
+    id: a.id,
+    name: a.name,
+    group: "builtin" as const,
+  }));
+  const instances: AuiOption[] = auiInstances
+    .filter((a) => a.name)
+    .map((a) => ({
+      id: `${AUI_REF_PREFIX.INSTANCE}${a.id}`,
+      name: a.name,
+      group: "instance" as const,
+    }));
+  const plugins: AuiOption[] = installedPlugins.map((p) => ({
+    id: `${AUI_REF_PREFIX.PLUGIN}${p.id}`,
+    name: p.name,
+    group: "plugin" as const,
+  }));
+  return [...builtins, ...instances, ...plugins];
+}
+
+/** Get the display name for an AUI ref. */
+export function resolveAuiName(
+  auiRef: string | undefined,
+  auiInstances: AuiInstance[],
+  installedPlugins: AuiPluginMeta[],
+): string | undefined {
+  if (!auiRef) return undefined;
+  if (auiRef.startsWith(AUI_REF_PREFIX.BUILTIN)) {
+    return BUILTIN_AUI_OPTIONS.find((a) => a.id === auiRef)?.name;
+  }
+  if (auiRef.startsWith(AUI_REF_PREFIX.INSTANCE)) {
+    const id = auiRef.slice(AUI_REF_PREFIX.INSTANCE.length);
+    return auiInstances.find((a) => a.id === id)?.name;
+  }
+  if (auiRef.startsWith(AUI_REF_PREFIX.PLUGIN)) {
+    const id = auiRef.slice(AUI_REF_PREFIX.PLUGIN.length);
+    return installedPlugins.find((p) => p.id === id)?.name;
+  }
+  // Legacy hardcoded IDs — fallback
+  return ALL_AUIS.find((a) => a.id === auiRef)?.name;
+}
+
+/** Resolve the AUI definition (schema + sample data) for a given AUI ref. */
+export function resolveAuiDefinition(
+  auiRef: string | undefined,
+  auiInstances: AuiInstance[],
+  installedPlugins: AuiPluginMeta[],
+): { jsonSchema: Record<string, any>; sampleData: any; rendererType: string } | null {
+  if (!auiRef) return null;
+  if (auiRef.startsWith(AUI_REF_PREFIX.BUILTIN)) {
+    const type = auiRef.slice(AUI_REF_PREFIX.BUILTIN.length);
+    return { jsonSchema: {}, sampleData: undefined, rendererType: type };
+  }
+  if (auiRef.startsWith(AUI_REF_PREFIX.INSTANCE)) {
+    const id = auiRef.slice(AUI_REF_PREFIX.INSTANCE.length);
+    const aui = auiInstances.find((a) => a.id === id);
+    if (!aui) return null;
+    return {
+      jsonSchema: aui.jsonSchema,
+      sampleData: aui.sampleData,
+      rendererType: aui.rendererType,
+    };
+  }
+  if (auiRef.startsWith(AUI_REF_PREFIX.PLUGIN)) {
+    const id = auiRef.slice(AUI_REF_PREFIX.PLUGIN.length);
+    const plugin = installedPlugins.find((p) => p.id === id);
+    if (!plugin) return null;
+    return {
+      jsonSchema: plugin.dataSchema,
+      sampleData: plugin.sampleData,
+      rendererType: plugin.id,
+    };
+  }
+  return null;
+}
 
 // ============ Helpers ============
 let _idCounter = Date.now();
@@ -99,6 +199,24 @@ function generateId(): string {
 export const useWorkflowStore = defineStore("workflow", () => {
   // ============ Workflow Groups ============
   const workflowGroups = ref<WorkflowGroup[]>([
+    {
+      id: "g0",
+      name: "测试甘特图",
+      description: "用于测试 AUI 甘特图渲染器的工作流组，包含示例甘特图节点",
+      scenarios: "快速体验甘特图功能：进入组 → 打开工作流 → 点击运行 → 查看甘特图结果",
+      createdAt: Date.now(),
+      workflows: [
+        {
+          id: "w0",
+          name: "测试甘特图",
+          desc: "运行甘特图测试节点，生成项目进度甘特图数据",
+          createdAt: Date.now(),
+          nodes: [
+            { id: "n0", order: 1, name: "甘特图测试", desc: "生成项目进度甘特图数据，用于测试AUI甘特图渲染器", content: "分析当前项目的任务和里程碑，生成甘特图数据。输出数据需包含：任务名称(title)、开始日期(startDate)、结束日期(endDate)、进度百分比(progress)、颜色标识(color)。至少包含4个任务阶段。", skills: ["s8"], agents: ["a4"], aui: "plugin:gantt" },
+          ],
+        },
+      ],
+    },
     {
       id: "g1",
       name: "代码质量管理",
@@ -157,8 +275,8 @@ export const useWorkflowStore = defineStore("workflow", () => {
     },
   ]);
 
-  const currentGroupId = ref<string>("g1");
-  const currentWorkflowId = ref<string>("w1");
+  const currentGroupId = ref<string>("g0");
+  const currentWorkflowId = ref<string>("w0");
 
   // ============ Computed ============
   const currentGroup = computed(() =>
@@ -434,6 +552,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
     { id: "lib6", order: 0, name: "性能分析", desc: "分析代码性能瓶颈", content: "运行性能分析工具，识别慢查询和性能瓶颈", skills: ["s8"], agents: ["a4"] },
     { id: "lib7", order: 0, name: "需求拆解", desc: "将需求文档拆分为开发任务", content: "分析需求文档，提取功能点，拆分为可执行的开发任务", skills: ["s5"], agents: ["a4"] },
     { id: "lib8", order: 0, name: "架构评审", desc: "评审系统架构设计", content: "审查架构设计方案，评估技术选型和系统设计是否合理", skills: ["s6"], agents: ["a4"] },
+    { id: "lib9", order: 0, name: "甘特图测试", desc: "生成项目进度甘特图数据，用于测试AUI甘特图渲染器", content: "分析当前项目的任务和里程碑，生成甘特图数据。输出数据需包含：任务名称(title)、开始日期(startDate)、结束日期(endDate)、进度百分比(progress)、颜色标识(color)。至少包含4个任务阶段。", skills: ["s8"], agents: ["a4"], aui: "plugin:gantt" },
   ]);
 
   function addToLibrary(name: string, desc: string, content: string, skills: string[], agents: string[], aui?: string, requireAudit?: boolean, executionMode?: string) {
@@ -481,12 +600,49 @@ export const useWorkflowStore = defineStore("workflow", () => {
     return ALL_AGENTS.find((a) => a.id === id);
   }
 
-  function getAuiById(id: string): WorkflowNodeAui | undefined {
-    return ALL_AUIS.find((a) => a.id === id);
+  function getAuiById(
+    id: string,
+    auiInstances?: AuiInstance[],
+    installedPlugins?: AuiPluginMeta[],
+  ): WorkflowNodeAui | undefined {
+    // First try BUILDIN_AUI_OPTIONS
+    const builtin = BUILTIN_AUI_OPTIONS.find((a) => a.id === id);
+    if (builtin) return builtin;
+    // Try legacy ALL_AUIS IDs for backward compatibility
+    const legacy = ALL_AUIS.find((a) => a.id === id);
+    if (legacy) return legacy;
+    // Try AUI instances
+    if (auiInstances) {
+      const prefix = AUI_REF_PREFIX.INSTANCE;
+      if (id.startsWith(prefix)) {
+        const auiId = id.slice(prefix.length);
+        const aui = auiInstances.find((a) => a.id === auiId);
+        if (aui) return { id, name: aui.name, color: "#6366f1" };
+      }
+    }
+    // Try plugins
+    if (installedPlugins) {
+      const prefix = AUI_REF_PREFIX.PLUGIN;
+      if (id.startsWith(prefix)) {
+        const pId = id.slice(prefix.length);
+        const p = installedPlugins.find((pl) => pl.id === pId);
+        if (p) return { id, name: p.name, color: "#0ea5e9" };
+      }
+    }
+    return undefined;
   }
 
   function getExecutionModeById(id: string): WorkflowExecutionMode | undefined {
     return ALL_EXECUTION_MODES.find((m) => m.id === id);
+  }
+
+  /** Find a workflow by ID across all groups. */
+  function findWorkflowById(workflowId: string): Workflow | undefined {
+    for (const group of workflowGroups.value) {
+      const wf = group.workflows.find((w) => w.id === workflowId);
+      if (wf) return wf;
+    }
+    return undefined;
   }
 
   return {
@@ -525,5 +681,6 @@ export const useWorkflowStore = defineStore("workflow", () => {
     getAgentById,
     getAuiById,
     getExecutionModeById,
+    findWorkflowById,
   };
 });
