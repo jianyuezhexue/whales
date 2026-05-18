@@ -1,119 +1,3 @@
-<script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
-import { useI18n } from "vue-i18n";
-import { useWorkflowStore } from "@/stores/workflow";
-
-defineProps<{
-  parentName?: string;
-}>();
-
-export interface ScheduleConfig {
-  enabled: boolean;
-  mode: "interval" | "daily";
-  intervalValue: number;
-  intervalUnit: "seconds" | "minutes" | "hours";
-  dailyTime: string;
-}
-
-const emit = defineEmits<{
-  (e: "close"): void;
-  (e: "confirm", name: string, workflowId?: string, workflowName?: string, schedule?: ScheduleConfig): void;
-}>();
-
-const { t } = useI18n();
-const workflowStore = useWorkflowStore();
-
-const allWorkflows = computed(() => {
-  const list: { id: string; name: string }[] = [];
-  for (const group of workflowStore.workflowGroups) {
-    for (const wf of group.workflows) {
-      list.push({ id: wf.id, name: wf.name });
-    }
-  }
-  return list;
-});
-
-// Schedule
-const scheduleEnabled = ref(false);
-const scheduleMode = ref<"interval" | "daily">("interval");
-const intervalValue = ref(30);
-const intervalUnit = ref<"seconds" | "minutes" | "hours">("minutes");
-const dailyTime = ref("09:00");
-const dailyDropdownOpen = ref(false);
-
-// 00:00 to 23:30, every 30 minutes
-const dailyTimeOptions = computed(() => {
-  const opts: string[] = [];
-  for (let h = 0; h < 24; h++) {
-    const hh = String(h).padStart(2, "0");
-    opts.push(`${hh}:00`);
-    opts.push(`${hh}:30`);
-  }
-  return opts;
-});
-
-const selectDailyTime = (time: string) => {
-  dailyTime.value = time;
-  dailyDropdownOpen.value = false;
-};
-
-const buildSchedule = (): ScheduleConfig => ({
-  enabled: scheduleEnabled.value,
-  mode: scheduleMode.value,
-  intervalValue: intervalValue.value,
-  intervalUnit: intervalUnit.value,
-  dailyTime: dailyTime.value,
-});
-
-const name = ref("");
-const nameInputRef = ref<HTMLTextAreaElement>();
-
-const autoResize = () => {
-  const el = nameInputRef.value;
-  if (!el) return;
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 168) + 'px'; // max ~6 lines
-};
-const selectedWorkflowId = ref("");
-const workflowDropdownOpen = ref(false);
-
-const selectedWorkflowName = computed(() => {
-  if (!selectedWorkflowId.value) return "";
-  const wf = allWorkflows.value.find((w) => w.id === selectedWorkflowId.value);
-  return wf ? wf.name : "";
-});
-
-const toggleWorkflowDropdown = () => {
-  workflowDropdownOpen.value = !workflowDropdownOpen.value;
-};
-
-const selectWorkflow = (id: string) => {
-  selectedWorkflowId.value = id;
-  workflowDropdownOpen.value = false;
-};
-
-const clearWorkflow = (e: Event) => {
-  e.stopPropagation();
-  selectedWorkflowId.value = "";
-};
-
-const handleConfirm = () => {
-  const trimmed = name.value.trim();
-  if (!trimmed) return;
-  const wf = allWorkflows.value.find((w) => w.id === selectedWorkflowId.value);
-  emit("confirm", trimmed, selectedWorkflowId.value || undefined, wf?.name, buildSchedule());
-  name.value = "";
-  selectedWorkflowId.value = "";
-  scheduleEnabled.value = false;
-};
-
-const onOpened = () => {
-  nextTick(() => nameInputRef.value?.focus());
-};
-
-defineExpose({ onOpened });
-</script>
-
 <template>
   <div class="modal-overlay" @click.self="emit('close')">
     <div class="modal-panel">
@@ -246,6 +130,122 @@ defineExpose({ onOpened });
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref, computed, nextTick } from "vue";
+import { useI18n } from "vue-i18n";
+import { useWorkflowStore } from "@/stores/workflow";
+
+defineProps<{
+  parentName?: string;
+}>();
+
+export interface ScheduleConfig {
+  enabled: boolean;
+  mode: "interval" | "daily";
+  intervalValue: number;
+  intervalUnit: "seconds" | "minutes" | "hours";
+  dailyTime: string;
+}
+
+const emit = defineEmits<{
+  (e: "close"): void;
+  (e: "confirm", name: string, workflowId?: string, workflowName?: string, schedule?: ScheduleConfig): void;
+}>();
+
+const { t } = useI18n();
+const workflowStore = useWorkflowStore();
+
+const allWorkflows = computed(() => {
+  const list: { id: string; name: string }[] = [];
+  for (const group of workflowStore.workflowGroups) {
+    for (const wf of group.workflows) {
+      list.push({ id: wf.id, name: wf.name });
+    }
+  }
+  return list;
+});
+
+// Schedule
+const scheduleEnabled = ref(false);
+const scheduleMode = ref<"interval" | "daily">("interval");
+const intervalValue = ref(30);
+const intervalUnit = ref<"seconds" | "minutes" | "hours">("minutes");
+const dailyTime = ref("09:00");
+const dailyDropdownOpen = ref(false);
+
+// 00:00 to 23:30, every 30 minutes
+const dailyTimeOptions = computed(() => {
+  const opts: string[] = [];
+  for (let h = 0; h < 24; h++) {
+    const hh = String(h).padStart(2, "0");
+    opts.push(`${hh}:00`);
+    opts.push(`${hh}:30`);
+  }
+  return opts;
+});
+
+const selectDailyTime = (time: string) => {
+  dailyTime.value = time;
+  dailyDropdownOpen.value = false;
+};
+
+const buildSchedule = (): ScheduleConfig => ({
+  enabled: scheduleEnabled.value,
+  mode: scheduleMode.value,
+  intervalValue: intervalValue.value,
+  intervalUnit: intervalUnit.value,
+  dailyTime: dailyTime.value,
+});
+
+const name = ref("");
+const nameInputRef = ref<HTMLTextAreaElement>();
+
+const autoResize = () => {
+  const el = nameInputRef.value;
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 168) + 'px'; // max ~6 lines
+};
+const selectedWorkflowId = ref("");
+const workflowDropdownOpen = ref(false);
+
+const selectedWorkflowName = computed(() => {
+  if (!selectedWorkflowId.value) return "";
+  const wf = allWorkflows.value.find((w) => w.id === selectedWorkflowId.value);
+  return wf ? wf.name : "";
+});
+
+const toggleWorkflowDropdown = () => {
+  workflowDropdownOpen.value = !workflowDropdownOpen.value;
+};
+
+const selectWorkflow = (id: string) => {
+  selectedWorkflowId.value = id;
+  workflowDropdownOpen.value = false;
+};
+
+const clearWorkflow = (e: Event) => {
+  e.stopPropagation();
+  selectedWorkflowId.value = "";
+};
+
+const handleConfirm = () => {
+  const trimmed = name.value.trim();
+  if (!trimmed) return;
+  const wf = allWorkflows.value.find((w) => w.id === selectedWorkflowId.value);
+  emit("confirm", trimmed, selectedWorkflowId.value || undefined, wf?.name, buildSchedule());
+  name.value = "";
+  selectedWorkflowId.value = "";
+  scheduleEnabled.value = false;
+};
+
+const onOpened = () => {
+  nextTick(() => nameInputRef.value?.focus());
+};
+
+defineExpose({ onOpened });
+</script>
 
 <style lang="scss" scoped>
 .modal-overlay {

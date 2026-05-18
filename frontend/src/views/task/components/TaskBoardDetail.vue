@@ -1,197 +1,3 @@
-<script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount, nextTick } from "vue";
-import { useI18n } from "vue-i18n";
-import { useTaskStore } from "@/stores/task";
-import type { TaskNodeResult } from "@/stores/task";
-import { EventsOn } from "../../../../wailsjs/runtime/runtime";
-import TaskTerminal from "./TaskTerminal.vue";
-import TaskNodeResultModal from "./TaskNodeResultModal.vue";
-
-const { t } = useI18n();
-const taskStore = useTaskStore();
-
-const viewMode = ref<"process" | "result">("process");
-const terminalRef = ref<InstanceType<typeof TaskTerminal>>();
-const showNodeResultModal = ref(false);
-const activeNodeResult = ref<TaskNodeResult | null>(null);
-const activeNodeName = ref("");
-
-const statusLabels: Record<string, string> = {
-  pending: "taskboard.status-pending",
-  running: "taskboard.status-running",
-  completed: "taskboard.status-completed",
-  failed: "taskboard.status-failed",
-};
-
-const statusColors: Record<string, string> = {
-  pending: "#9a9a9a",
-  running: "#1f1f1f",
-  completed: "#27ae60",
-  failed: "#e74c3c",
-};
-
-const selectedTask = computed(() => {
-  if (!taskStore.selectedTaskId) return null;
-  return taskStore.boardTasks.find(
-    (t) => t.id === taskStore.selectedTaskId,
-  ) ?? null;
-});
-
-const isWorkflowTask = computed(() =>
-  selectedTask.value?.nodeResults && selectedTask.value.nodeResults.length > 0,
-);
-
-const hasNodeResults = computed(() => isWorkflowTask.value);
-
-const nodeCounts = computed(() => {
-  const results = selectedTask.value?.nodeResults;
-  if (!results) return { total: 0, completed: 0, failed: 0, running: 0, pending: 0 };
-  return {
-    total: results.length,
-    completed: results.filter((n) => n.status === "completed").length,
-    failed: results.filter((n) => n.status === "failed").length,
-    running: results.filter((n) => n.status === "running").length,
-    pending: results.filter((n) => n.status === "pending").length,
-  };
-});
-
-function computeDuration(nr: TaskNodeResult): string | null {
-  if (nr.durationMs !== undefined && nr.durationMs >= 0) {
-    const ms = nr.durationMs;
-    if (ms < 1000) return `${ms}ms`;
-    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-    const mins = Math.floor(ms / 60000);
-    const secs = Math.round((ms % 60000) / 1000);
-    return `${mins}m ${secs}s`;
-  }
-  if (!nr.startedAt || !nr.completedAt) return null;
-  try {
-    const start = new Date(nr.startedAt).getTime();
-    const end = new Date(nr.completedAt).getTime();
-    const ms = end - start;
-    if (ms < 1000) return `${ms}ms`;
-    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-    const mins = Math.floor(ms / 60000);
-    const secs = Math.round((ms % 60000) / 1000);
-    return `${mins}m ${secs}s`;
-  } catch {
-    return null;
-  }
-}
-
-function openNodeResult(nodeResult: TaskNodeResult) {
-  activeNodeResult.value = nodeResult;
-  activeNodeName.value = nodeResult.nodeName;
-  showNodeResultModal.value = true;
-}
-
-function closeNodeResultModal() {
-  showNodeResultModal.value = false;
-  activeNodeResult.value = null;
-}
-
-// Track sub-node PTY subscriptions for cleanup
-const nodePtyUnsubs = new Map<string, () => void>();
-
-function subscribeNodePtyOutput(taskId: string, nodeId: string) {
-  const ptyTaskId = `${taskId}-${nodeId}`;
-  const unsubOutput = EventsOn("pty-output", (evtTaskId: string, data: string) => {
-    if (evtTaskId !== ptyTaskId) return;
-    const task = taskStore.boardTasks.find((t) => t.id === taskId);
-    if (task) {
-      task.executionLog = (task.executionLog || "") + data;
-    }
-  });
-  nodePtyUnsubs.set(`${taskId}-${nodeId}-output`, unsubOutput);
-}
-
-function clearNodePtySubs() {
-  for (const unsub of nodePtyUnsubs.values()) {
-    unsub();
-  }
-  nodePtyUnsubs.clear();
-}
-
-// Subscribe to PTY output to capture execution log
-watch(() => taskStore.selectedTaskId, (newId, oldId) => {
-  if (oldId) {
-    taskStore.unsubscribeBoard(oldId);
-    clearNodePtySubs();
-  }
-
-  viewMode.value = "process";
-
-  if (newId) {
-    const task = taskStore.boardTasks.find((t) => t.id === newId);
-
-    // For workflow tasks: subscribe to each node's PTY output
-    if (task?.nodeResults && task.nodeResults.length > 0) {
-      for (const nr of task.nodeResults) {
-        subscribeNodePtyOutput(newId, nr.nodeId);
-      }
-    }
-
-    // Also subscribe to parent task's PTY (for non-workflow tasks)
-    taskStore.subscribeBoard(newId, (data) => {
-      const t = taskStore.boardTasks.find((x) => x.id === newId);
-      if (t) {
-        t.executionLog = (t.executionLog || "") + data;
-      }
-    }, () => {
-      const t = taskStore.boardTasks.find((x) => x.id === newId);
-      if (t && t.status === "running") {
-        t.status = "completed";
-      }
-    });
-  }
-}, { immediate: true });
-
-// When nodeResults get initialized (workflow execution starts), subscribe to their PTY output
-watch(() => selectedTask.value?.nodeResults, (results) => {
-  const taskId = taskStore.selectedTaskId;
-  if (!taskId || !results || results.length === 0) return;
-  for (const nr of results) {
-    const key = `${taskId}-${nr.nodeId}-output`;
-    if (!nodePtyUnsubs.has(key)) {
-      subscribeNodePtyOutput(taskId, nr.nodeId);
-    }
-  }
-}, { deep: true });
-
-// Auto-switch to result view when task completes or fails
-watch(() => selectedTask.value?.status, (newStatus, oldStatus) => {
-  if (
-    (newStatus === "completed" || newStatus === "failed") &&
-    oldStatus === "running"
-  ) {
-    viewMode.value = "result";
-  }
-});
-
-// Fit terminal when switching tasks or view modes
-watch([() => taskStore.selectedTaskId, viewMode], () => {
-  nextTick(() => {
-    terminalRef.value?.fit();
-  });
-});
-
-onBeforeUnmount(() => {
-  if (taskStore.selectedTaskId) {
-    taskStore.unsubscribeBoard(taskStore.selectedTaskId);
-  }
-  clearNodePtySubs();
-});
-
-const switchToResult = () => {
-  viewMode.value = "result";
-};
-
-const switchToProcess = () => {
-  viewMode.value = "process";
-  nextTick(() => terminalRef.value?.fit());
-};
-</script>
-
 <template>
   <div class="board-detail">
     <template v-if="selectedTask">
@@ -421,6 +227,200 @@ const switchToProcess = () => {
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref, computed, watch, onBeforeUnmount, nextTick } from "vue";
+import { useI18n } from "vue-i18n";
+import { useTaskStore } from "@/stores/task";
+import type { TaskNodeResult } from "@/stores/task";
+import { EventsOn } from "../../../../wailsjs/runtime/runtime";
+import TaskTerminal from "./TaskTerminal.vue";
+import TaskNodeResultModal from "./TaskNodeResultModal.vue";
+
+const { t } = useI18n();
+const taskStore = useTaskStore();
+
+const viewMode = ref<"process" | "result">("process");
+const terminalRef = ref<InstanceType<typeof TaskTerminal>>();
+const showNodeResultModal = ref(false);
+const activeNodeResult = ref<TaskNodeResult | null>(null);
+const activeNodeName = ref("");
+
+const statusLabels: Record<string, string> = {
+  pending: "taskboard.status-pending",
+  running: "taskboard.status-running",
+  completed: "taskboard.status-completed",
+  failed: "taskboard.status-failed",
+};
+
+const statusColors: Record<string, string> = {
+  pending: "#9a9a9a",
+  running: "#1f1f1f",
+  completed: "#27ae60",
+  failed: "#e74c3c",
+};
+
+const selectedTask = computed(() => {
+  if (!taskStore.selectedTaskId) return null;
+  return taskStore.boardTasks.find(
+    (t) => t.id === taskStore.selectedTaskId,
+  ) ?? null;
+});
+
+const isWorkflowTask = computed(() =>
+  selectedTask.value?.nodeResults && selectedTask.value.nodeResults.length > 0,
+);
+
+const hasNodeResults = computed(() => isWorkflowTask.value);
+
+const nodeCounts = computed(() => {
+  const results = selectedTask.value?.nodeResults;
+  if (!results) return { total: 0, completed: 0, failed: 0, running: 0, pending: 0 };
+  return {
+    total: results.length,
+    completed: results.filter((n) => n.status === "completed").length,
+    failed: results.filter((n) => n.status === "failed").length,
+    running: results.filter((n) => n.status === "running").length,
+    pending: results.filter((n) => n.status === "pending").length,
+  };
+});
+
+function computeDuration(nr: TaskNodeResult): string | null {
+  if (nr.durationMs !== undefined && nr.durationMs >= 0) {
+    const ms = nr.durationMs;
+    if (ms < 1000) return `${ms}ms`;
+    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+    const mins = Math.floor(ms / 60000);
+    const secs = Math.round((ms % 60000) / 1000);
+    return `${mins}m ${secs}s`;
+  }
+  if (!nr.startedAt || !nr.completedAt) return null;
+  try {
+    const start = new Date(nr.startedAt).getTime();
+    const end = new Date(nr.completedAt).getTime();
+    const ms = end - start;
+    if (ms < 1000) return `${ms}ms`;
+    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+    const mins = Math.floor(ms / 60000);
+    const secs = Math.round((ms % 60000) / 1000);
+    return `${mins}m ${secs}s`;
+  } catch {
+    return null;
+  }
+}
+
+function openNodeResult(nodeResult: TaskNodeResult) {
+  activeNodeResult.value = nodeResult;
+  activeNodeName.value = nodeResult.nodeName;
+  showNodeResultModal.value = true;
+}
+
+function closeNodeResultModal() {
+  showNodeResultModal.value = false;
+  activeNodeResult.value = null;
+}
+
+// Track sub-node PTY subscriptions for cleanup
+const nodePtyUnsubs = new Map<string, () => void>();
+
+function subscribeNodePtyOutput(taskId: string, nodeId: string) {
+  const ptyTaskId = `${taskId}-${nodeId}`;
+  const unsubOutput = EventsOn("pty-output", (evtTaskId: string, data: string) => {
+    if (evtTaskId !== ptyTaskId) return;
+    const task = taskStore.boardTasks.find((t) => t.id === taskId);
+    if (task) {
+      task.executionLog = (task.executionLog || "") + data;
+    }
+  });
+  nodePtyUnsubs.set(`${taskId}-${nodeId}-output`, unsubOutput);
+}
+
+function clearNodePtySubs() {
+  for (const unsub of nodePtyUnsubs.values()) {
+    unsub();
+  }
+  nodePtyUnsubs.clear();
+}
+
+// Subscribe to PTY output to capture execution log
+watch(() => taskStore.selectedTaskId, (newId, oldId) => {
+  if (oldId) {
+    taskStore.unsubscribeBoard(oldId);
+    clearNodePtySubs();
+  }
+
+  viewMode.value = "process";
+
+  if (newId) {
+    const task = taskStore.boardTasks.find((t) => t.id === newId);
+
+    // For workflow tasks: subscribe to each node's PTY output
+    if (task?.nodeResults && task.nodeResults.length > 0) {
+      for (const nr of task.nodeResults) {
+        subscribeNodePtyOutput(newId, nr.nodeId);
+      }
+    }
+
+    // Also subscribe to parent task's PTY (for non-workflow tasks)
+    taskStore.subscribeBoard(newId, (data) => {
+      const t = taskStore.boardTasks.find((x) => x.id === newId);
+      if (t) {
+        t.executionLog = (t.executionLog || "") + data;
+      }
+    }, () => {
+      const t = taskStore.boardTasks.find((x) => x.id === newId);
+      if (t && t.status === "running") {
+        t.status = "completed";
+      }
+    });
+  }
+}, { immediate: true });
+
+// When nodeResults get initialized (workflow execution starts), subscribe to their PTY output
+watch(() => selectedTask.value?.nodeResults, (results) => {
+  const taskId = taskStore.selectedTaskId;
+  if (!taskId || !results || results.length === 0) return;
+  for (const nr of results) {
+    const key = `${taskId}-${nr.nodeId}-output`;
+    if (!nodePtyUnsubs.has(key)) {
+      subscribeNodePtyOutput(taskId, nr.nodeId);
+    }
+  }
+}, { deep: true });
+
+// Auto-switch to result view when task completes or fails
+watch(() => selectedTask.value?.status, (newStatus, oldStatus) => {
+  if (
+    (newStatus === "completed" || newStatus === "failed") &&
+    oldStatus === "running"
+  ) {
+    viewMode.value = "result";
+  }
+});
+
+// Fit terminal when switching tasks or view modes
+watch([() => taskStore.selectedTaskId, viewMode], () => {
+  nextTick(() => {
+    terminalRef.value?.fit();
+  });
+});
+
+onBeforeUnmount(() => {
+  if (taskStore.selectedTaskId) {
+    taskStore.unsubscribeBoard(taskStore.selectedTaskId);
+  }
+  clearNodePtySubs();
+});
+
+const switchToResult = () => {
+  viewMode.value = "result";
+};
+
+const switchToProcess = () => {
+  viewMode.value = "process";
+  nextTick(() => terminalRef.value?.fit());
+};
+</script>
 
 <style lang="scss" scoped>
 .board-detail {

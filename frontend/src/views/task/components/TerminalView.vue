@@ -1,3 +1,126 @@
+<template>
+  <div class="terminal-view">
+    <!-- 卡片网格 -->
+    <div class="task-grid" :style="{ gridTemplateColumns: gridColumns }">
+      <TaskCard v-for="task in tasks" :key="task.id" :task="task"
+        :ref="(el: any) => setCardRef(task.id, el)"
+        @close="handleCloseCard" @preview="handlePreview" @rename="handleRenameTask" />
+      <div v-if="tasks.length === 0" class="empty-state">
+        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#c0c0c0"
+          stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 2L11 13" />
+          <polygon points="22 2 15 22 11 13 2 9 22 2" />
+        </svg>
+        <div class="empty-text">在下方输入消息开始新任务</div>
+      </div>
+    </div>
+
+    <!-- 底部输入栏 -->
+    <div class="input-bar">
+      <div class="input-controls">
+        <div class="input-dropdown" :class="{ open: agentDropdownOpen }"
+          v-click-outside="() => { agentDropdownOpen = false }">
+          <div class="dropdown-toggle" @click="toggleAgentDropdown">
+            <span :class="{ placeholder: !selectedAgentLabel }">
+              {{ selectedAgentLabel || "Agent" }}
+            </span>
+            <button v-if="selectedAgentLabel" class="dropdown-clear" type="button"
+              @click="clearAgent" title="清除选择">
+              <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+          <div v-if="agentDropdownOpen" class="dropdown-popup">
+            <div v-for="opt in agentOptions" :key="opt.value" class="dropdown-item"
+              :class="{ active: selectedAgent === opt.value }"
+              @click="selectAgentOption(opt.value)">
+              {{ opt.label }}
+            </div>
+          </div>
+        </div>
+
+        <div class="input-dropdown" :class="{ open: workflowDropdownOpen }"
+          v-click-outside="() => { workflowDropdownOpen = false }">
+          <div class="dropdown-toggle" @click="toggleWorkflowDropdown">
+            <span :class="{ placeholder: !selectedWorkflowName }">
+              {{ selectedWorkflowName || "工作流" }}
+            </span>
+            <button v-if="selectedWorkflowName" class="dropdown-clear" type="button"
+              @click="clearWorkflow" title="清除选择">
+              <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+          <div v-if="workflowDropdownOpen" class="dropdown-popup">
+            <div class="dropdown-item" :class="{ active: !selectedWorkflowId }"
+              @click="selectWorkflow('')">
+              不选择
+            </div>
+            <div v-for="wf in allWorkflows" :key="wf.id" class="dropdown-item"
+              :class="{ active: selectedWorkflowId === wf.id }"
+              @click="selectWorkflow(wf.id)">
+              {{ wf.name }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 列数选择器 -->
+        <div class="input-dropdown column-dropdown" :class="{ open: columnDropdownOpen }"
+          v-click-outside="() => { columnDropdownOpen = false }">
+          <button class="column-trigger" type="button" @click="toggleColumnDropdown"
+            title="列数">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+            </svg>
+            <span>{{ columnMode }}</span>
+          </button>
+          <div v-if="columnDropdownOpen" class="dropdown-popup column-popup">
+            <button
+              v-for="opt in columnOptions"
+              :key="opt.value"
+              :class="['column-opt', { active: columnMode === opt.value }]"
+              type="button"
+              @click="selectColumn(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
+
+        <input v-model="inputText" class="task-input" type="text"
+          :placeholder="t('taskpage.input-placeholder')"
+          @keyup.enter="handleSend" />
+
+        <button class="send-btn" @click="handleSend" :disabled="!inputText.trim()">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13" />
+            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script lang="ts">
 export default { name: 'TerminalView' };
 </script>
@@ -182,129 +305,6 @@ const selectColumn = (val: string) => {
   columnDropdownOpen.value = false;
 };
 </script>
-
-<template>
-  <div class="terminal-view">
-    <!-- 卡片网格 -->
-    <div class="task-grid" :style="{ gridTemplateColumns: gridColumns }">
-      <TaskCard v-for="task in tasks" :key="task.id" :task="task"
-        :ref="(el: any) => setCardRef(task.id, el)"
-        @close="handleCloseCard" @preview="handlePreview" @rename="handleRenameTask" />
-      <div v-if="tasks.length === 0" class="empty-state">
-        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#c0c0c0"
-          stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 2L11 13" />
-          <polygon points="22 2 15 22 11 13 2 9 22 2" />
-        </svg>
-        <div class="empty-text">在下方输入消息开始新任务</div>
-      </div>
-    </div>
-
-    <!-- 底部输入栏 -->
-    <div class="input-bar">
-      <div class="input-controls">
-        <div class="input-dropdown" :class="{ open: agentDropdownOpen }"
-          v-click-outside="() => { agentDropdownOpen = false }">
-          <div class="dropdown-toggle" @click="toggleAgentDropdown">
-            <span :class="{ placeholder: !selectedAgentLabel }">
-              {{ selectedAgentLabel || "Agent" }}
-            </span>
-            <button v-if="selectedAgentLabel" class="dropdown-clear" type="button"
-              @click="clearAgent" title="清除选择">
-              <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </div>
-          <div v-if="agentDropdownOpen" class="dropdown-popup">
-            <div v-for="opt in agentOptions" :key="opt.value" class="dropdown-item"
-              :class="{ active: selectedAgent === opt.value }"
-              @click="selectAgentOption(opt.value)">
-              {{ opt.label }}
-            </div>
-          </div>
-        </div>
-
-        <div class="input-dropdown" :class="{ open: workflowDropdownOpen }"
-          v-click-outside="() => { workflowDropdownOpen = false }">
-          <div class="dropdown-toggle" @click="toggleWorkflowDropdown">
-            <span :class="{ placeholder: !selectedWorkflowName }">
-              {{ selectedWorkflowName || "工作流" }}
-            </span>
-            <button v-if="selectedWorkflowName" class="dropdown-clear" type="button"
-              @click="clearWorkflow" title="清除选择">
-              <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </div>
-          <div v-if="workflowDropdownOpen" class="dropdown-popup">
-            <div class="dropdown-item" :class="{ active: !selectedWorkflowId }"
-              @click="selectWorkflow('')">
-              不选择
-            </div>
-            <div v-for="wf in allWorkflows" :key="wf.id" class="dropdown-item"
-              :class="{ active: selectedWorkflowId === wf.id }"
-              @click="selectWorkflow(wf.id)">
-              {{ wf.name }}
-            </div>
-          </div>
-        </div>
-
-        <!-- 列数选择器 -->
-        <div class="input-dropdown column-dropdown" :class="{ open: columnDropdownOpen }"
-          v-click-outside="() => { columnDropdownOpen = false }">
-          <button class="column-trigger" type="button" @click="toggleColumnDropdown"
-            title="列数">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7" />
-              <rect x="14" y="3" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" />
-              <rect x="14" y="14" width="7" height="7" />
-            </svg>
-            <span>{{ columnMode }}</span>
-          </button>
-          <div v-if="columnDropdownOpen" class="dropdown-popup column-popup">
-            <button
-              v-for="opt in columnOptions"
-              :key="opt.value"
-              :class="['column-opt', { active: columnMode === opt.value }]"
-              type="button"
-              @click="selectColumn(opt.value)"
-            >
-              {{ opt.label }}
-            </button>
-          </div>
-        </div>
-
-        <input v-model="inputText" class="task-input" type="text"
-          :placeholder="t('taskpage.input-placeholder')"
-          @keyup.enter="handleSend" />
-
-        <button class="send-btn" @click="handleSend" :disabled="!inputText.trim()">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13" />
-            <polygon points="22 2 15 22 11 13 2 9 22 2" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  </div>
-</template>
 
 <style lang="scss" scoped>
 .terminal-view {

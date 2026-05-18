@@ -1,3 +1,7 @@
+<template>
+  <div ref="terminalContainer" class="terminal-container"></div>
+</template>
+
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, onActivated, nextTick } from 'vue';
 import { Terminal, type ILinkProvider } from '@xterm/xterm';
@@ -178,10 +182,6 @@ onBeforeUnmount(() => {
   terminal?.dispose();
 });
 </script>
-
-<template>
-  <div ref="terminalContainer" class="terminal-container"></div>
-</template>
 
 <style lang="scss" scoped>
 .terminal-container {

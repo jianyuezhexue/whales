@@ -1,249 +1,3 @@
-<script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
-import { useI18n } from "vue-i18n";
-import ConfirmModal from "@/components/ConfirmModal.vue";
-
-const { t } = useI18n();
-
-interface ChatMessage {
-  role: "ai" | "user";
-  content: string;
-}
-
-interface EvolutionItem {
-  id: string;
-  suggestion: string;
-  problem: string;
-  scenario: string;
-  sourceTaskId: string;
-  sourceTaskName: string;
-  status: "pending" | "adopted";
-  createdAt: number;
-  chatMessages: ChatMessage[];
-}
-
-interface PainPoint {
-  id: string;
-  title: string;
-  problem: string;
-  scenario: string;
-  createdAt: number;
-}
-
-const formatDate = (timestamp: number) => {
-  const d = new Date(timestamp);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-};
-
-// --- Tab ---
-type TabKey = "suggestions" | "painpoints";
-const activeTab = ref<TabKey>("suggestions");
-
-// --- Evolution (suggestions) ---
-const items = ref<EvolutionItem[]>([
-  {
-    id: "1",
-    suggestion: "代码审查节点中的静态分析步骤缺少对 TypeScript 严格模式的支持，建议在 pipeline 中增加 tsconfig strict 检查步骤",
-    problem: "当前代码审查流程未能检测 TypeScript strict 模式相关的类型错误，导致部分代码合入后出现运行时异常",
-    scenario: "在「商城后端」项目中，代码审查节点跳过了 strictNullChecks 相关错误，上线后出现 Cannot read property of undefined 崩溃",
-    sourceTaskId: "task-001",
-    sourceTaskName: "商城后端代码审查优化",
-    status: "pending",
-    createdAt: Date.now() - 86400000 * 5,
-    chatMessages: [
-      { role: "ai", content: "我在代码审查过程中发现，当前工作流的静态分析步骤没有覆盖 TypeScript strict 模式。建议在「代码审查」节点的编译步骤前增加 strict 类型检查。" },
-      { role: "user", content: "具体应该怎么修改？" },
-      { role: "ai", content: "建议在「代码审查」节点的「静态分析」子步骤中，添加执行 `tsc --noEmit --strict` 的命令，并将其执行结果的 exit code 作为节点通过条件之一。" },
-    ],
-  },
-  {
-    id: "2",
-    suggestion: "对话超过 20 轮仍未达成任务目标时，应触发自动升级机制，将任务转交给更高级别的 Agent 处理",
-    problem: "低级别 Agent 在多轮对话中陷入循环，反复生成相似内容却无法完成任务，浪费 token 且延误交付",
-    scenario: "在「API 文档自动生成」任务中，Agent 连续 25 轮试图理解一个复杂的数据结构却反复出错，最终由人工介入才完成",
-    sourceTaskId: "task-002",
-    sourceTaskName: "API 文档自动生成",
-    status: "pending",
-    createdAt: Date.now() - 86400000 * 3,
-    chatMessages: [
-      { role: "ai", content: "我注意到在「API 文档自动生成」任务中，CodePilot 连续 25 轮对话未能完成任务。建议在工作流中增加一个「轮次上限」节点配置，超过阈值自动升级到 ArchMaster。" },
-      { role: "user", content: "阈值设为多少比较合理？" },
-      { role: "ai", content: "根据历史数据分析，建议默认设为 20 轮。简单任务平均 5-8 轮完成，复杂任务 15-20 轮。超过 20 轮说明当前 Agent 能力不足，应升级处理。" },
-    ],
-  },
-  {
-    id: "3",
-    suggestion: "知识管理节点在读取大型 Markdown 文件时性能较差，建议增加分段读取和缓存机制",
-    problem: "处理超过 500KB 的 Markdown 文件时，前端渲染卡顿且内存占用过高，影响整体任务执行效率",
-    scenario: "在「技术规范文档同步」任务中，读取 800KB 的 API 设计文档时页面白屏约 5 秒，且 xterm 终端输出也出现延迟",
-    sourceTaskId: "task-003",
-    sourceTaskName: "技术规范文档同步",
-    status: "pending",
-    createdAt: Date.now() - 86400000 * 2,
-    chatMessages: [
-      { role: "ai", content: "知识管理节点在处理大文件时性能瓶颈在于一次性加载和渲染整个文件。建议采用分段读取，每次只渲染可视区域的内容。" },
-      { role: "user", content: "用虚拟滚动还是分页？" },
-      { role: "ai", content: "建议使用虚拟滚动方案，这样用户可以连续浏览而不需要翻页操作。同时增加文件级别的 LRU 缓存，避免重复解析。" },
-      { role: "user", content: "具体改动涉及哪些文件和模块？" },
-      { role: "ai", content: "主要涉及 KnowledgeContent.vue 的渲染逻辑、useKnowledgeApi.ts 的读取方法，以及 knowledge store 的缓存层。预计改动 3 个文件。" },
-    ],
-  },
-  {
-    id: "4",
-    suggestion: "TaskView 中 Agent 选择器和 Workflow 选择器的下拉菜单应统一向上弹出，保持与 AgentView 一致",
-    problem: "TaskView 的下拉菜单位置不统一，部分向下弹出导致超出可视区域，用户体验不一致",
-    scenario: "在创建新任务时，选择 Agent 的下拉菜单在窗口较小时向下弹出并被截断，用户无法看到底部选项",
-    sourceTaskId: "task-004",
-    sourceTaskName: "安全漏洞扫描任务",
-    status: "adopted",
-    createdAt: Date.now() - 86400000 * 7,
-    chatMessages: [
-      { role: "ai", content: "发现 TaskView 中的下拉菜单未遵循项目统一的「向上弹出」规范。AgentView 使用的是 checkDropDirection 逻辑动态判断，建议 TaskView 也采用同样方案。" },
-      { role: "user", content: "这个改动影响范围大吗？" },
-      { role: "ai", content: "只涉及 TaskView.vue 一个文件，改动量约 30 行代码，主要是复用已有的 checkDropDirection 方法。" },
-    ],
-  },
-  {
-    id: "5",
-    suggestion: "工作流节点执行失败后的重试策略过于简单（仅重试 1 次），应支持指数退避重试和自定义重试条件",
-    problem: "某些临时性错误（如网络波动、资源竞争）在立即重试后依然失败，但延迟重试通常能成功，简单的重试策略导致任务失败率偏高",
-    scenario: "在 DevOps 自动化工作流中，Docker 镜像拉取因 registry 限流失败，立即重试仍然被限，但 30 秒后重试成功。当前策略导致该步骤被标记为失败",
-    sourceTaskId: "task-005",
-    sourceTaskName: "DevOps 自动化部署",
-    status: "pending",
-    createdAt: Date.now() - 86400000,
-    chatMessages: [
-      { role: "ai", content: "建议将重试策略从「固定重试1次」改为「指数退避重试，最多3次，间隔 5s/25s/125s」。同时在节点配置中增加「可重试错误类型」选项。" },
-    ],
-  },
-]);
-
-const statusFilter = ref<"all" | "pending" | "adopted">("all");
-
-const filteredItems = computed(() => {
-  if (statusFilter.value === "all") return items.value;
-  return items.value.filter((item) => item.status === statusFilter.value);
-});
-
-// Chat modal
-const showChatModal = ref(false);
-const chattingItem = ref<EvolutionItem | null>(null);
-const chatInput = ref("");
-const chatBodyRef = ref<HTMLElement | null>(null);
-
-const openChatModal = (item: EvolutionItem) => {
-  chattingItem.value = item;
-  chatInput.value = "";
-  showChatModal.value = true;
-  nextTick(() => {
-    scrollChatToBottom();
-  });
-};
-
-const scrollChatToBottom = () => {
-  nextTick(() => {
-    if (chatBodyRef.value) {
-      chatBodyRef.value.scrollTop = chatBodyRef.value.scrollHeight;
-    }
-  });
-};
-
-const sendChatMessage = () => {
-  if (!chattingItem.value || !chatInput.value.trim()) return;
-  chattingItem.value.chatMessages.push({ role: "user", content: chatInput.value.trim() });
-  chatInput.value = "";
-  scrollChatToBottom();
-  setTimeout(() => {
-    if (chattingItem.value) {
-      chattingItem.value.chatMessages.push({
-        role: "ai",
-        content: "收到，我会根据我们讨论的方案来调整优化策略。如果确认无误，你可以点击「确定采纳」来应用这个优化。",
-      });
-      scrollChatToBottom();
-    }
-  }, 1000);
-};
-
-const handleChatKeydown = (e: KeyboardEvent) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendChatMessage();
-  }
-};
-
-// Adopt confirm
-const showAdoptModal = ref(false);
-const adoptingItem = ref<EvolutionItem | null>(null);
-
-const confirmAdopt = (item: EvolutionItem) => {
-  adoptingItem.value = item;
-  showAdoptModal.value = true;
-};
-
-const onAdoptConfirm = () => {
-  if (adoptingItem.value) {
-    adoptingItem.value.status = "adopted";
-  }
-  showAdoptModal.value = false;
-  adoptingItem.value = null;
-};
-
-const onAdoptCancel = () => {
-  showAdoptModal.value = false;
-  adoptingItem.value = null;
-};
-
-const statusLabel = (status: string) => {
-  switch (status) {
-    case "pending":
-      return { text: "待采纳", class: "status-pending" };
-    case "adopted":
-      return { text: "已采纳", class: "status-adopted" };
-    default:
-      return { text: status, class: "" };
-  }
-};
-
-// --- Pain points ---
-const painPoints = ref<PainPoint[]>([]);
-
-const showPainPointModal = ref(false);
-const painPointForm = ref({ title: "", problem: "", scenario: "" });
-
-const openPainPointModal = () => {
-  painPointForm.value = { title: "", problem: "", scenario: "" };
-  showPainPointModal.value = true;
-};
-
-const submitPainPoint = () => {
-  if (!painPointForm.value.title.trim() || !painPointForm.value.problem.trim()) return;
-  painPoints.value.unshift({
-    id: `pp-${Date.now()}`,
-    title: painPointForm.value.title.trim(),
-    problem: painPointForm.value.problem.trim(),
-    scenario: painPointForm.value.scenario.trim(),
-    createdAt: Date.now(),
-  });
-  showPainPointModal.value = false;
-};
-
-const showPainPointDeleteModal = ref(false);
-const deletingPainPointId = ref<string | null>(null);
-
-const confirmDeletePainPoint = (id: string) => {
-  deletingPainPointId.value = id;
-  showPainPointDeleteModal.value = true;
-};
-
-const onPainPointDeleteConfirm = () => {
-  if (deletingPainPointId.value) {
-    painPoints.value = painPoints.value.filter((p) => p.id !== deletingPainPointId.value);
-  }
-  showPainPointDeleteModal.value = false;
-  deletingPainPointId.value = null;
-};
-</script>
-
 <template>
   <div class="evolution-page page-layout">
     <!-- Header -->
@@ -645,6 +399,252 @@ const onPainPointDeleteConfirm = () => {
     />
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref, computed, nextTick } from "vue";
+import { useI18n } from "vue-i18n";
+import ConfirmModal from "@/components/ConfirmModal.vue";
+
+const { t } = useI18n();
+
+interface ChatMessage {
+  role: "ai" | "user";
+  content: string;
+}
+
+interface EvolutionItem {
+  id: string;
+  suggestion: string;
+  problem: string;
+  scenario: string;
+  sourceTaskId: string;
+  sourceTaskName: string;
+  status: "pending" | "adopted";
+  createdAt: number;
+  chatMessages: ChatMessage[];
+}
+
+interface PainPoint {
+  id: string;
+  title: string;
+  problem: string;
+  scenario: string;
+  createdAt: number;
+}
+
+const formatDate = (timestamp: number) => {
+  const d = new Date(timestamp);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+};
+
+// --- Tab ---
+type TabKey = "suggestions" | "painpoints";
+const activeTab = ref<TabKey>("suggestions");
+
+// --- Evolution (suggestions) ---
+const items = ref<EvolutionItem[]>([
+  {
+    id: "1",
+    suggestion: "代码审查节点中的静态分析步骤缺少对 TypeScript 严格模式的支持，建议在 pipeline 中增加 tsconfig strict 检查步骤",
+    problem: "当前代码审查流程未能检测 TypeScript strict 模式相关的类型错误，导致部分代码合入后出现运行时异常",
+    scenario: "在「商城后端」项目中，代码审查节点跳过了 strictNullChecks 相关错误，上线后出现 Cannot read property of undefined 崩溃",
+    sourceTaskId: "task-001",
+    sourceTaskName: "商城后端代码审查优化",
+    status: "pending",
+    createdAt: Date.now() - 86400000 * 5,
+    chatMessages: [
+      { role: "ai", content: "我在代码审查过程中发现，当前工作流的静态分析步骤没有覆盖 TypeScript strict 模式。建议在「代码审查」节点的编译步骤前增加 strict 类型检查。" },
+      { role: "user", content: "具体应该怎么修改？" },
+      { role: "ai", content: "建议在「代码审查」节点的「静态分析」子步骤中，添加执行 `tsc --noEmit --strict` 的命令，并将其执行结果的 exit code 作为节点通过条件之一。" },
+    ],
+  },
+  {
+    id: "2",
+    suggestion: "对话超过 20 轮仍未达成任务目标时，应触发自动升级机制，将任务转交给更高级别的 Agent 处理",
+    problem: "低级别 Agent 在多轮对话中陷入循环，反复生成相似内容却无法完成任务，浪费 token 且延误交付",
+    scenario: "在「API 文档自动生成」任务中，Agent 连续 25 轮试图理解一个复杂的数据结构却反复出错，最终由人工介入才完成",
+    sourceTaskId: "task-002",
+    sourceTaskName: "API 文档自动生成",
+    status: "pending",
+    createdAt: Date.now() - 86400000 * 3,
+    chatMessages: [
+      { role: "ai", content: "我注意到在「API 文档自动生成」任务中，CodePilot 连续 25 轮对话未能完成任务。建议在工作流中增加一个「轮次上限」节点配置，超过阈值自动升级到 ArchMaster。" },
+      { role: "user", content: "阈值设为多少比较合理？" },
+      { role: "ai", content: "根据历史数据分析，建议默认设为 20 轮。简单任务平均 5-8 轮完成，复杂任务 15-20 轮。超过 20 轮说明当前 Agent 能力不足，应升级处理。" },
+    ],
+  },
+  {
+    id: "3",
+    suggestion: "知识管理节点在读取大型 Markdown 文件时性能较差，建议增加分段读取和缓存机制",
+    problem: "处理超过 500KB 的 Markdown 文件时，前端渲染卡顿且内存占用过高，影响整体任务执行效率",
+    scenario: "在「技术规范文档同步」任务中，读取 800KB 的 API 设计文档时页面白屏约 5 秒，且 xterm 终端输出也出现延迟",
+    sourceTaskId: "task-003",
+    sourceTaskName: "技术规范文档同步",
+    status: "pending",
+    createdAt: Date.now() - 86400000 * 2,
+    chatMessages: [
+      { role: "ai", content: "知识管理节点在处理大文件时性能瓶颈在于一次性加载和渲染整个文件。建议采用分段读取，每次只渲染可视区域的内容。" },
+      { role: "user", content: "用虚拟滚动还是分页？" },
+      { role: "ai", content: "建议使用虚拟滚动方案，这样用户可以连续浏览而不需要翻页操作。同时增加文件级别的 LRU 缓存，避免重复解析。" },
+      { role: "user", content: "具体改动涉及哪些文件和模块？" },
+      { role: "ai", content: "主要涉及 KnowledgeContent.vue 的渲染逻辑、useKnowledgeApi.ts 的读取方法，以及 knowledge store 的缓存层。预计改动 3 个文件。" },
+    ],
+  },
+  {
+    id: "4",
+    suggestion: "TaskView 中 Agent 选择器和 Workflow 选择器的下拉菜单应统一向上弹出，保持与 AgentView 一致",
+    problem: "TaskView 的下拉菜单位置不统一，部分向下弹出导致超出可视区域，用户体验不一致",
+    scenario: "在创建新任务时，选择 Agent 的下拉菜单在窗口较小时向下弹出并被截断，用户无法看到底部选项",
+    sourceTaskId: "task-004",
+    sourceTaskName: "安全漏洞扫描任务",
+    status: "adopted",
+    createdAt: Date.now() - 86400000 * 7,
+    chatMessages: [
+      { role: "ai", content: "发现 TaskView 中的下拉菜单未遵循项目统一的「向上弹出」规范。AgentView 使用的是 checkDropDirection 逻辑动态判断，建议 TaskView 也采用同样方案。" },
+      { role: "user", content: "这个改动影响范围大吗？" },
+      { role: "ai", content: "只涉及 TaskView.vue 一个文件，改动量约 30 行代码，主要是复用已有的 checkDropDirection 方法。" },
+    ],
+  },
+  {
+    id: "5",
+    suggestion: "工作流节点执行失败后的重试策略过于简单（仅重试 1 次），应支持指数退避重试和自定义重试条件",
+    problem: "某些临时性错误（如网络波动、资源竞争）在立即重试后依然失败，但延迟重试通常能成功，简单的重试策略导致任务失败率偏高",
+    scenario: "在 DevOps 自动化工作流中，Docker 镜像拉取因 registry 限流失败，立即重试仍然被限，但 30 秒后重试成功。当前策略导致该步骤被标记为失败",
+    sourceTaskId: "task-005",
+    sourceTaskName: "DevOps 自动化部署",
+    status: "pending",
+    createdAt: Date.now() - 86400000,
+    chatMessages: [
+      { role: "ai", content: "建议将重试策略从「固定重试1次」改为「指数退避重试，最多3次，间隔 5s/25s/125s」。同时在节点配置中增加「可重试错误类型」选项。" },
+    ],
+  },
+]);
+
+const statusFilter = ref<"all" | "pending" | "adopted">("all");
+
+const filteredItems = computed(() => {
+  if (statusFilter.value === "all") return items.value;
+  return items.value.filter((item) => item.status === statusFilter.value);
+});
+
+// Chat modal
+const showChatModal = ref(false);
+const chattingItem = ref<EvolutionItem | null>(null);
+const chatInput = ref("");
+const chatBodyRef = ref<HTMLElement | null>(null);
+
+const openChatModal = (item: EvolutionItem) => {
+  chattingItem.value = item;
+  chatInput.value = "";
+  showChatModal.value = true;
+  nextTick(() => {
+    scrollChatToBottom();
+  });
+};
+
+const scrollChatToBottom = () => {
+  nextTick(() => {
+    if (chatBodyRef.value) {
+      chatBodyRef.value.scrollTop = chatBodyRef.value.scrollHeight;
+    }
+  });
+};
+
+const sendChatMessage = () => {
+  if (!chattingItem.value || !chatInput.value.trim()) return;
+  chattingItem.value.chatMessages.push({ role: "user", content: chatInput.value.trim() });
+  chatInput.value = "";
+  scrollChatToBottom();
+  setTimeout(() => {
+    if (chattingItem.value) {
+      chattingItem.value.chatMessages.push({
+        role: "ai",
+        content: "收到，我会根据我们讨论的方案来调整优化策略。如果确认无误，你可以点击「确定采纳」来应用这个优化。",
+      });
+      scrollChatToBottom();
+    }
+  }, 1000);
+};
+
+const handleChatKeydown = (e: KeyboardEvent) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
+};
+
+// Adopt confirm
+const showAdoptModal = ref(false);
+const adoptingItem = ref<EvolutionItem | null>(null);
+
+const confirmAdopt = (item: EvolutionItem) => {
+  adoptingItem.value = item;
+  showAdoptModal.value = true;
+};
+
+const onAdoptConfirm = () => {
+  if (adoptingItem.value) {
+    adoptingItem.value.status = "adopted";
+  }
+  showAdoptModal.value = false;
+  adoptingItem.value = null;
+};
+
+const onAdoptCancel = () => {
+  showAdoptModal.value = false;
+  adoptingItem.value = null;
+};
+
+const statusLabel = (status: string) => {
+  switch (status) {
+    case "pending":
+      return { text: "待采纳", class: "status-pending" };
+    case "adopted":
+      return { text: "已采纳", class: "status-adopted" };
+    default:
+      return { text: status, class: "" };
+  }
+};
+
+// --- Pain points ---
+const painPoints = ref<PainPoint[]>([]);
+
+const showPainPointModal = ref(false);
+const painPointForm = ref({ title: "", problem: "", scenario: "" });
+
+const openPainPointModal = () => {
+  painPointForm.value = { title: "", problem: "", scenario: "" };
+  showPainPointModal.value = true;
+};
+
+const submitPainPoint = () => {
+  if (!painPointForm.value.title.trim() || !painPointForm.value.problem.trim()) return;
+  painPoints.value.unshift({
+    id: `pp-${Date.now()}`,
+    title: painPointForm.value.title.trim(),
+    problem: painPointForm.value.problem.trim(),
+    scenario: painPointForm.value.scenario.trim(),
+    createdAt: Date.now(),
+  });
+  showPainPointModal.value = false;
+};
+
+const showPainPointDeleteModal = ref(false);
+const deletingPainPointId = ref<string | null>(null);
+
+const confirmDeletePainPoint = (id: string) => {
+  deletingPainPointId.value = id;
+  showPainPointDeleteModal.value = true;
+};
+
+const onPainPointDeleteConfirm = () => {
+  if (deletingPainPointId.value) {
+    painPoints.value = painPoints.value.filter((p) => p.id !== deletingPainPointId.value);
+  }
+  showPainPointDeleteModal.value = false;
+  deletingPainPointId.value = null;
+};
+</script>
 
 <style lang="scss" scoped>
 .evolution-page {

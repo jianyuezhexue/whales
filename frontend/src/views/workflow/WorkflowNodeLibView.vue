@@ -1,149 +1,3 @@
-<script setup lang="ts">
-import { ref, computed } from "vue";
-import { useI18n } from "vue-i18n";
-import { useRouter } from "vue-router";
-import { useWorkflowStore, ALL_SKILLS, ALL_AGENTS, ALL_EXECUTION_MODES, getAllAuiOptions, resolveAuiName } from "@/stores/workflow";
-import type { WorkflowNode } from "@/stores/workflow";
-import { useAuiStore } from "@/stores/aui";
-import { useAuiPluginStore } from "@/stores/auiPlugin";
-import ConfirmModal from "@/components/ConfirmModal.vue";
-
-const { t } = useI18n();
-const router = useRouter();
-const store = useWorkflowStore();
-const auiStore = useAuiStore();
-const pluginStore = useAuiPluginStore();
-
-const auiOptions = computed(() => getAllAuiOptions(auiStore.auiList, pluginStore.installedPlugins));
-
-// Search
-const searchQuery = ref("");
-
-// Modals
-const showEditorModal = ref(false);
-const editingNode = ref<WorkflowNode | null>(null);
-const editName = ref("");
-const editDesc = ref("");
-const editContent = ref("");
-const editSkills = ref<string[]>([]);
-const editAgents = ref<string[]>([]);
-const editAuiId = ref("");
-const editRequireAudit = ref(false);
-const editExecutionMode = ref("default");
-const skillDropdownOpen = ref(false);
-const agentDropdownOpen = ref(false);
-
-const showDeleteModal = ref(false);
-const deletingNode = ref<WorkflowNode | null>(null);
-
-// Computed
-const filteredNodes = computed(() => {
-  if (!searchQuery.value) return store.nodeLibrary;
-  const q = searchQuery.value.toLowerCase();
-  return store.nodeLibrary.filter(
-    (n) => n.name.toLowerCase().includes(q) || n.desc.toLowerCase().includes(q)
-  );
-});
-
-// Helpers
-function skillTag(id: string) {
-  return ALL_SKILLS.find((s) => s.id === id);
-}
-function agentName(id: string) {
-  return ALL_AGENTS.find((a) => a.id === id);
-}
-function auiName(id: string) {
-  const name = resolveAuiName(id, auiStore.auiList, pluginStore.installedPlugins);
-  return name ? { id, name } : undefined;
-}
-function executionModeName(id: string) {
-  return ALL_EXECUTION_MODES.find((m) => m.id === id);
-}
-function toggleSkill(skillId: string, list: string[]) {
-  const idx = list.indexOf(skillId);
-  if (idx >= 0) list.splice(idx, 1);
-  else list.push(skillId);
-}
-
-// Actions
-function goBack() {
-  router.push("/workflow");
-}
-
-function openNewModal() {
-  editingNode.value = null;
-  editName.value = "";
-  editDesc.value = "";
-  editContent.value = "";
-  editSkills.value = [];
-  editAgents.value = [];
-  editAuiId.value = "";
-  editRequireAudit.value = false;
-  editExecutionMode.value = "default";
-  showEditorModal.value = true;
-}
-
-function openEditModal(node: WorkflowNode) {
-  editingNode.value = node;
-  editName.value = node.name;
-  editDesc.value = node.desc;
-  editContent.value = node.content;
-  editSkills.value = [...node.skills];
-  editAgents.value = [...node.agents];
-  editAuiId.value = node.aui ?? "";
-  editRequireAudit.value = node.requireAudit ?? false;
-  editExecutionMode.value = node.executionMode ?? "default";
-  showEditorModal.value = true;
-}
-
-function saveNode() {
-  const name = editName.value.trim();
-  if (!name) return;
-  if (editingNode.value) {
-    store.updateLibraryNode(editingNode.value.id, {
-      name,
-      desc: editDesc.value.trim(),
-      content: editContent.value.trim(),
-      skills: editSkills.value,
-      agents: editAgents.value,
-      aui: editAuiId.value || undefined,
-      requireAudit: editRequireAudit.value || undefined,
-      executionMode: editExecutionMode.value || undefined,
-    });
-  } else {
-    store.addToLibrary(
-      name,
-      editDesc.value.trim(),
-      editContent.value.trim(),
-      editSkills.value,
-      editAgents.value,
-      editAuiId.value || undefined,
-      editRequireAudit.value || undefined,
-      editExecutionMode.value || undefined
-    );
-  }
-  showEditorModal.value = false;
-  editingNode.value = null;
-}
-
-function cancelEditor() {
-  showEditorModal.value = false;
-  editingNode.value = null;
-}
-
-function confirmDelete(node: WorkflowNode) {
-  deletingNode.value = node;
-  showDeleteModal.value = true;
-}
-
-function onDeleteConfirm() {
-  if (!deletingNode.value) return;
-  store.deleteFromLibrary(deletingNode.value.id);
-  showDeleteModal.value = false;
-  deletingNode.value = null;
-}
-</script>
-
 <template>
   <div class="lib-view page-layout">
     <!-- Header -->
@@ -385,6 +239,152 @@ function onDeleteConfirm() {
       :danger="true" @confirm="onDeleteConfirm" @cancel="showDeleteModal = false" />
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { useI18n } from "vue-i18n";
+import { useRouter } from "vue-router";
+import { useWorkflowStore, ALL_SKILLS, ALL_AGENTS, ALL_EXECUTION_MODES, getAllAuiOptions, resolveAuiName } from "@/stores/workflow";
+import type { WorkflowNode } from "@/stores/workflow";
+import { useAuiStore } from "@/stores/aui";
+import { useAuiPluginStore } from "@/stores/auiPlugin";
+import ConfirmModal from "@/components/ConfirmModal.vue";
+
+const { t } = useI18n();
+const router = useRouter();
+const store = useWorkflowStore();
+const auiStore = useAuiStore();
+const pluginStore = useAuiPluginStore();
+
+const auiOptions = computed(() => getAllAuiOptions(auiStore.auiList, pluginStore.installedPlugins));
+
+// Search
+const searchQuery = ref("");
+
+// Modals
+const showEditorModal = ref(false);
+const editingNode = ref<WorkflowNode | null>(null);
+const editName = ref("");
+const editDesc = ref("");
+const editContent = ref("");
+const editSkills = ref<string[]>([]);
+const editAgents = ref<string[]>([]);
+const editAuiId = ref("");
+const editRequireAudit = ref(false);
+const editExecutionMode = ref("default");
+const skillDropdownOpen = ref(false);
+const agentDropdownOpen = ref(false);
+
+const showDeleteModal = ref(false);
+const deletingNode = ref<WorkflowNode | null>(null);
+
+// Computed
+const filteredNodes = computed(() => {
+  if (!searchQuery.value) return store.nodeLibrary;
+  const q = searchQuery.value.toLowerCase();
+  return store.nodeLibrary.filter(
+    (n) => n.name.toLowerCase().includes(q) || n.desc.toLowerCase().includes(q)
+  );
+});
+
+// Helpers
+function skillTag(id: string) {
+  return ALL_SKILLS.find((s) => s.id === id);
+}
+function agentName(id: string) {
+  return ALL_AGENTS.find((a) => a.id === id);
+}
+function auiName(id: string) {
+  const name = resolveAuiName(id, auiStore.auiList, pluginStore.installedPlugins);
+  return name ? { id, name } : undefined;
+}
+function executionModeName(id: string) {
+  return ALL_EXECUTION_MODES.find((m) => m.id === id);
+}
+function toggleSkill(skillId: string, list: string[]) {
+  const idx = list.indexOf(skillId);
+  if (idx >= 0) list.splice(idx, 1);
+  else list.push(skillId);
+}
+
+// Actions
+function goBack() {
+  router.push("/workflow");
+}
+
+function openNewModal() {
+  editingNode.value = null;
+  editName.value = "";
+  editDesc.value = "";
+  editContent.value = "";
+  editSkills.value = [];
+  editAgents.value = [];
+  editAuiId.value = "";
+  editRequireAudit.value = false;
+  editExecutionMode.value = "default";
+  showEditorModal.value = true;
+}
+
+function openEditModal(node: WorkflowNode) {
+  editingNode.value = node;
+  editName.value = node.name;
+  editDesc.value = node.desc;
+  editContent.value = node.content;
+  editSkills.value = [...node.skills];
+  editAgents.value = [...node.agents];
+  editAuiId.value = node.aui ?? "";
+  editRequireAudit.value = node.requireAudit ?? false;
+  editExecutionMode.value = node.executionMode ?? "default";
+  showEditorModal.value = true;
+}
+
+function saveNode() {
+  const name = editName.value.trim();
+  if (!name) return;
+  if (editingNode.value) {
+    store.updateLibraryNode(editingNode.value.id, {
+      name,
+      desc: editDesc.value.trim(),
+      content: editContent.value.trim(),
+      skills: editSkills.value,
+      agents: editAgents.value,
+      aui: editAuiId.value || undefined,
+      requireAudit: editRequireAudit.value || undefined,
+      executionMode: editExecutionMode.value || undefined,
+    });
+  } else {
+    store.addToLibrary(
+      name,
+      editDesc.value.trim(),
+      editContent.value.trim(),
+      editSkills.value,
+      editAgents.value,
+      editAuiId.value || undefined,
+      editRequireAudit.value || undefined,
+      editExecutionMode.value || undefined
+    );
+  }
+  showEditorModal.value = false;
+  editingNode.value = null;
+}
+
+function cancelEditor() {
+  showEditorModal.value = false;
+  editingNode.value = null;
+}
+
+function confirmDelete(node: WorkflowNode) {
+  deletingNode.value = node;
+  showDeleteModal.value = true;
+}
+
+function onDeleteConfirm() {
+  if (!deletingNode.value) return;
+  store.deleteFromLibrary(deletingNode.value.id);
+  showDeleteModal.value = false;
+  deletingNode.value = null;
+}
+</script>
 
 <style lang="scss" scoped>
 .lib-view {

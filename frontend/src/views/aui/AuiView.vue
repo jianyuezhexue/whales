@@ -1,154 +1,3 @@
-<script setup lang="ts">
-import { onMounted, ref, computed, nextTick, watch } from "vue"
-import { useAuiPluginStore } from "@/stores/auiPlugin"
-import type { AuiPluginMeta } from "@/stores/auiPlugin"
-import CreateAuiModal from "@/components/aui/CreateAuiModal.vue"
-
-const pluginStore = useAuiPluginStore()
-
-const activeTab = ref<"installed" | "market">("installed")
-
-onMounted(() => {
-  pluginStore.loadInstalledPlugins()
-  pluginStore.loadMarketPlugins()
-})
-
-// ── Plugin install / uninstall ──────────────────────────
-const installingId = ref<string | null>(null)
-
-async function onInstallPlugin(pluginId: string) {
-  installingId.value = pluginId
-  try {
-    await pluginStore.installPlugin(pluginId)
-  } finally {
-    installingId.value = null
-  }
-}
-
-async function onUninstallPlugin(pluginId: string) {
-  try {
-    await pluginStore.uninstallPlugin(pluginId)
-  } catch {
-    // ignore
-  }
-}
-
-// ── Market search ──────────────────────────────────────
-const marketSearch = ref("")
-
-const filteredMarketPlugins = computed(() => {
-  const q = marketSearch.value.trim().toLowerCase()
-  if (!q) return pluginStore.marketPlugins
-  return pluginStore.marketPlugins.filter(p =>
-    p.name.toLowerCase().includes(q) ||
-    p.description.toLowerCase().includes(q) ||
-    p.category.toLowerCase().includes(q) ||
-    p.tags.some(t => t.toLowerCase().includes(q))
-  )
-})
-
-// ── Plugin preview ──────────────────────────────────────
-const previewPlugin = ref<AuiPluginMeta | null>(null)
-const showPreviewModal = ref(false)
-const previewJsonStr = ref("")
-const previewJsonError = ref(false)
-const previewMode = ref<'data' | 'render'>('render')
-const previewContainerRef = ref<HTMLElement | null>(null)
-let previewElement: HTMLElement | null = null
-
-function openPreview(plugin: AuiPluginMeta) {
-  previewPlugin.value = plugin
-  previewJsonStr.value = JSON.stringify(plugin.sampleData, null, 2)
-  previewJsonError.value = false
-  previewMode.value = 'render'
-  showPreviewModal.value = true
-}
-
-function onPreviewJsonInput(e: Event) {
-  const val = (e.target as HTMLTextAreaElement).value
-  previewJsonStr.value = val
-  try {
-    const parsed = JSON.parse(val)
-    previewJsonError.value = false
-    updatePreviewData(parsed)
-  } catch {
-    previewJsonError.value = true
-  }
-}
-
-async function mountPreviewElement() {
-  if (!previewPlugin.value || !previewContainerRef.value) return
-
-  const plugin = previewPlugin.value
-  const tag = `aui-${plugin.id}`
-
-  // Inject plugin assets
-  await pluginStore.injectPlugin(plugin.id)
-
-  // Wait for custom element to be defined (with timeout fallback)
-  if (!customElements.get(tag)) {
-    try {
-      await Promise.race([
-        customElements.whenDefined(tag),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
-      ])
-    } catch {
-      return
-    }
-  }
-
-  // Remove previous
-  if (previewElement && previewElement.parentNode) {
-    previewElement.parentNode.removeChild(previewElement)
-  }
-
-  // Parse data before creating element
-  let renderData: any
-  try {
-    renderData = JSON.parse(previewJsonStr.value)
-  } catch {
-    renderData = plugin.sampleData
-  }
-
-  const el = document.createElement(tag) as HTMLElement & { data?: any }
-  // Set data BEFORE appending so connectedCallback can access it
-  el.data = renderData
-
-  previewContainerRef.value.innerHTML = ""
-  previewContainerRef.value.appendChild(el)
-  previewElement = el
-}
-
-function updatePreviewData(data: any) {
-  if (previewElement && "data" in previewElement) {
-    ;(previewElement as any).data = data
-  }
-}
-
-watch(showPreviewModal, (val) => {
-  if (val) {
-    nextTick(mountPreviewElement)
-  } else {
-    previewPlugin.value = null
-    previewElement = null
-  }
-})
-
-watch(previewMode, (mode) => {
-  if (mode === 'render' && showPreviewModal.value) {
-    nextTick(mountPreviewElement)
-  }
-})
-
-watch(() => previewPlugin.value?.id, () => {
-  if (showPreviewModal.value) {
-    nextTick(mountPreviewElement)
-  }
-})
-
-const showCreateModal = ref(false)
-</script>
-
 <template>
   <div class="aui-page page-layout">
     <div class="page-header">
@@ -324,6 +173,157 @@ const showCreateModal = ref(false)
     <CreateAuiModal v-model="showCreateModal" />
   </div>
 </template>
+
+<script setup lang="ts">
+import { onMounted, ref, computed, nextTick, watch } from "vue"
+import { useAuiPluginStore } from "@/stores/auiPlugin"
+import type { AuiPluginMeta } from "@/stores/auiPlugin"
+import CreateAuiModal from "@/components/aui/CreateAuiModal.vue"
+
+const pluginStore = useAuiPluginStore()
+
+const activeTab = ref<"installed" | "market">("installed")
+
+onMounted(() => {
+  pluginStore.loadInstalledPlugins()
+  pluginStore.loadMarketPlugins()
+})
+
+// ── Plugin install / uninstall ──────────────────────────
+const installingId = ref<string | null>(null)
+
+async function onInstallPlugin(pluginId: string) {
+  installingId.value = pluginId
+  try {
+    await pluginStore.installPlugin(pluginId)
+  } finally {
+    installingId.value = null
+  }
+}
+
+async function onUninstallPlugin(pluginId: string) {
+  try {
+    await pluginStore.uninstallPlugin(pluginId)
+  } catch {
+    // ignore
+  }
+}
+
+// ── Market search ──────────────────────────────────────
+const marketSearch = ref("")
+
+const filteredMarketPlugins = computed(() => {
+  const q = marketSearch.value.trim().toLowerCase()
+  if (!q) return pluginStore.marketPlugins
+  return pluginStore.marketPlugins.filter(p =>
+    p.name.toLowerCase().includes(q) ||
+    p.description.toLowerCase().includes(q) ||
+    p.category.toLowerCase().includes(q) ||
+    p.tags.some(t => t.toLowerCase().includes(q))
+  )
+})
+
+// ── Plugin preview ──────────────────────────────────────
+const previewPlugin = ref<AuiPluginMeta | null>(null)
+const showPreviewModal = ref(false)
+const previewJsonStr = ref("")
+const previewJsonError = ref(false)
+const previewMode = ref<'data' | 'render'>('render')
+const previewContainerRef = ref<HTMLElement | null>(null)
+let previewElement: HTMLElement | null = null
+
+function openPreview(plugin: AuiPluginMeta) {
+  previewPlugin.value = plugin
+  previewJsonStr.value = JSON.stringify(plugin.sampleData, null, 2)
+  previewJsonError.value = false
+  previewMode.value = 'render'
+  showPreviewModal.value = true
+}
+
+function onPreviewJsonInput(e: Event) {
+  const val = (e.target as HTMLTextAreaElement).value
+  previewJsonStr.value = val
+  try {
+    const parsed = JSON.parse(val)
+    previewJsonError.value = false
+    updatePreviewData(parsed)
+  } catch {
+    previewJsonError.value = true
+  }
+}
+
+async function mountPreviewElement() {
+  if (!previewPlugin.value || !previewContainerRef.value) return
+
+  const plugin = previewPlugin.value
+  const tag = `aui-${plugin.id}`
+
+  // Inject plugin assets
+  await pluginStore.injectPlugin(plugin.id)
+
+  // Wait for custom element to be defined (with timeout fallback)
+  if (!customElements.get(tag)) {
+    try {
+      await Promise.race([
+        customElements.whenDefined(tag),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+      ])
+    } catch {
+      return
+    }
+  }
+
+  // Remove previous
+  if (previewElement && previewElement.parentNode) {
+    previewElement.parentNode.removeChild(previewElement)
+  }
+
+  // Parse data before creating element
+  let renderData: any
+  try {
+    renderData = JSON.parse(previewJsonStr.value)
+  } catch {
+    renderData = plugin.sampleData
+  }
+
+  const el = document.createElement(tag) as HTMLElement & { data?: any }
+  // Set data BEFORE appending so connectedCallback can access it
+  el.data = renderData
+
+  previewContainerRef.value.innerHTML = ""
+  previewContainerRef.value.appendChild(el)
+  previewElement = el
+}
+
+function updatePreviewData(data: any) {
+  if (previewElement && "data" in previewElement) {
+    ;(previewElement as any).data = data
+  }
+}
+
+watch(showPreviewModal, (val) => {
+  if (val) {
+    nextTick(mountPreviewElement)
+  } else {
+    previewPlugin.value = null
+    previewElement = null
+  }
+})
+
+watch(previewMode, (mode) => {
+  if (mode === 'render' && showPreviewModal.value) {
+    nextTick(mountPreviewElement)
+  }
+})
+
+watch(() => previewPlugin.value?.id, () => {
+  if (showPreviewModal.value) {
+    nextTick(mountPreviewElement)
+  }
+})
+
+const showCreateModal = ref(false)
+</script>
 
 <style lang="scss" scoped>
 .aui-page {

@@ -1,3 +1,97 @@
+<template>
+  <div
+    class="board-card"
+    :class="{ 'is-child': depth && depth > 0, 'is-completed': task.status === 'completed' }"
+    :style="depth ? { marginLeft: `${depth * 20}px` } : {}"
+    @click="emit('select', task.id)"
+  >
+    <div class="card-left">
+      <!-- Completion checkbox for subtasks -->
+      <button
+        v-if="isSubtask"
+        class="complete-check"
+        :class="{ checked: task.status === 'completed' }"
+        @click="handleCheckbox"
+        :title="task.status === 'completed' ? '标记未完成' : '标记完成'"
+      >
+        <svg v-if="task.status === 'completed'" viewBox="0 0 24 24" width="12" height="12"
+          fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"
+          stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </button>
+      <!-- Status dot for non-subtasks -->
+      <span v-else class="status-dot" :style="{ backgroundColor: statusColors[task.status] }"></span>
+
+      <template v-if="renaming">
+        <input
+          ref="renameInputRef"
+          v-model="renameInput"
+          class="rename-input"
+          type="text"
+          @keyup.enter="confirmRename"
+          @keyup.escape="cancelRename"
+          @blur="confirmRename"
+          @click.stop
+        />
+      </template>
+      <template v-else>
+        <span class="card-name" :class="{ 'name-done': isSubtask && task.status === 'completed' }">
+          {{ task.name }}
+        </span>
+        <span v-if="sourceLabel" class="source-badge" :class="sourceClass">{{ sourceLabel }}</span>
+        <span v-if="childCountText" class="child-badge">{{ childCountText }}</span>
+      </template>
+    </div>
+    <div class="card-right">
+      <span class="card-time">{{ task.createdAt || "" }}</span>
+      <span class="status-text" :style="{ color: statusColors[task.status] }">
+        {{ t(statusLabels[task.status]) }}
+      </span>
+      <!-- View detail icon: always visible -->
+      <button
+        class="card-btn view-btn"
+        :title="t('taskboard.view-process')"
+        @click.stop="emit('view-detail', task)"
+      >
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      </button>
+      <div class="menu-wrapper" v-click-outside="() => { menuOpen = false; confirmDelete = false }">
+        <button class="card-btn menu-trigger" @click.stop="menuOpen = !menuOpen; confirmDelete = false">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none">
+            <circle cx="12" cy="5" r="1.5" />
+            <circle cx="12" cy="12" r="1.5" />
+            <circle cx="12" cy="19" r="1.5" />
+          </svg>
+        </button>
+        <div v-if="menuOpen" class="card-menu">
+          <template v-if="confirmDelete">
+            <div class="confirm-text">{{ t("taskboard.delete-confirm") }}</div>
+            <div class="confirm-actions">
+              <button class="confirm-btn confirm-yes" type="button" @click.stop="confirmDeleteAction">
+                {{ t("taskboard.delete") }}
+              </button>
+              <button class="confirm-btn confirm-no" type="button" @click.stop="cancelDelete">
+                {{ t("taskboard.cancel") }}
+              </button>
+            </div>
+          </template>
+          <template v-else>
+            <div class="menu-item" @click.stop="startRename">{{ t("taskboard.rename") }}</div>
+            <div class="menu-item menu-item-danger" @click.stop="handleDelete">
+              {{ t("taskboard.delete") }}
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, computed, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
@@ -107,100 +201,6 @@ const handleCheckbox = (e: Event) => {
   emit("toggle-complete", props.task.id);
 };
 </script>
-
-<template>
-  <div
-    class="board-card"
-    :class="{ 'is-child': depth && depth > 0, 'is-completed': task.status === 'completed' }"
-    :style="depth ? { marginLeft: `${depth * 20}px` } : {}"
-    @click="emit('select', task.id)"
-  >
-    <div class="card-left">
-      <!-- Completion checkbox for subtasks -->
-      <button
-        v-if="isSubtask"
-        class="complete-check"
-        :class="{ checked: task.status === 'completed' }"
-        @click="handleCheckbox"
-        :title="task.status === 'completed' ? '标记未完成' : '标记完成'"
-      >
-        <svg v-if="task.status === 'completed'" viewBox="0 0 24 24" width="12" height="12"
-          fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"
-          stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
-      </button>
-      <!-- Status dot for non-subtasks -->
-      <span v-else class="status-dot" :style="{ backgroundColor: statusColors[task.status] }"></span>
-
-      <template v-if="renaming">
-        <input
-          ref="renameInputRef"
-          v-model="renameInput"
-          class="rename-input"
-          type="text"
-          @keyup.enter="confirmRename"
-          @keyup.escape="cancelRename"
-          @blur="confirmRename"
-          @click.stop
-        />
-      </template>
-      <template v-else>
-        <span class="card-name" :class="{ 'name-done': isSubtask && task.status === 'completed' }">
-          {{ task.name }}
-        </span>
-        <span v-if="sourceLabel" class="source-badge" :class="sourceClass">{{ sourceLabel }}</span>
-        <span v-if="childCountText" class="child-badge">{{ childCountText }}</span>
-      </template>
-    </div>
-    <div class="card-right">
-      <span class="card-time">{{ task.createdAt || "" }}</span>
-      <span class="status-text" :style="{ color: statusColors[task.status] }">
-        {{ t(statusLabels[task.status]) }}
-      </span>
-      <!-- View detail icon: always visible -->
-      <button
-        class="card-btn view-btn"
-        :title="t('taskboard.view-process')"
-        @click.stop="emit('view-detail', task)"
-      >
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
-      </button>
-      <div class="menu-wrapper" v-click-outside="() => { menuOpen = false; confirmDelete = false }">
-        <button class="card-btn menu-trigger" @click.stop="menuOpen = !menuOpen; confirmDelete = false">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none">
-            <circle cx="12" cy="5" r="1.5" />
-            <circle cx="12" cy="12" r="1.5" />
-            <circle cx="12" cy="19" r="1.5" />
-          </svg>
-        </button>
-        <div v-if="menuOpen" class="card-menu">
-          <template v-if="confirmDelete">
-            <div class="confirm-text">{{ t("taskboard.delete-confirm") }}</div>
-            <div class="confirm-actions">
-              <button class="confirm-btn confirm-yes" type="button" @click.stop="confirmDeleteAction">
-                {{ t("taskboard.delete") }}
-              </button>
-              <button class="confirm-btn confirm-no" type="button" @click.stop="cancelDelete">
-                {{ t("taskboard.cancel") }}
-              </button>
-            </div>
-          </template>
-          <template v-else>
-            <div class="menu-item" @click.stop="startRename">{{ t("taskboard.rename") }}</div>
-            <div class="menu-item menu-item-danger" @click.stop="handleDelete">
-              {{ t("taskboard.delete") }}
-            </div>
-          </template>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
 
 <style lang="scss" scoped>
 .board-card {

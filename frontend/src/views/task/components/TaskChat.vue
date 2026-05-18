@@ -1,3 +1,19 @@
+<template>
+  <div class="chat-panel">
+    <div class="chat-input-area">
+      <input v-model="inputText" class="chat-input" type="text"
+        placeholder="输入消息..." @keyup.enter="handleSend" />
+      <button class="send-btn" @click="handleSend" :disabled="!inputText.trim()">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13" />
+          <polygon points="22 2 15 22 11 13 2 9 22 2" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref } from "vue";
 
@@ -14,22 +30,6 @@ const handleSend = () => {
   inputText.value = "";
 };
 </script>
-
-<template>
-  <div class="chat-panel">
-    <div class="chat-input-area">
-      <input v-model="inputText" class="chat-input" type="text"
-        placeholder="输入消息..." @keyup.enter="handleSend" />
-      <button class="send-btn" @click="handleSend" :disabled="!inputText.trim()">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="22" y1="2" x2="11" y2="13" />
-          <polygon points="22 2 15 22 11 13 2 9 22 2" />
-        </svg>
-      </button>
-    </div>
-  </div>
-</template>
 
 <style lang="scss" scoped>
 .chat-panel {

@@ -1,38 +1,3 @@
-<script setup lang="ts">
-export interface Task {
-  id: string;
-  name: string;
-  status: "pending" | "running" | "completed" | "failed";
-  workflowId?: string;
-  workflowName?: string;
-  agentName?: string;
-}
-
-defineProps<{
-  tasks: Task[];
-  selectedTaskId: string | null;
-}>();
-
-const emit = defineEmits<{
-  (e: "select-task", taskId: string): void;
-  (e: "delete-task", taskId: string): void;
-}>();
-
-const statusLabels: Record<string, string> = {
-  pending: "待执行",
-  running: "执行中",
-  completed: "已完成",
-  failed: "失败",
-};
-
-const statusColors: Record<string, string> = {
-  pending: "#9a9a9a",
-  running: "#1f1f1f",
-  completed: "#27ae60",
-  failed: "#e74c3c",
-};
-</script>
-
 <template>
   <div class="task-list-panel">
     <div class="task-items">
@@ -71,6 +36,41 @@ const statusColors: Record<string, string> = {
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+export interface Task {
+  id: string;
+  name: string;
+  status: "pending" | "running" | "completed" | "failed";
+  workflowId?: string;
+  workflowName?: string;
+  agentName?: string;
+}
+
+defineProps<{
+  tasks: Task[];
+  selectedTaskId: string | null;
+}>();
+
+const emit = defineEmits<{
+  (e: "select-task", taskId: string): void;
+  (e: "delete-task", taskId: string): void;
+}>();
+
+const statusLabels: Record<string, string> = {
+  pending: "待执行",
+  running: "执行中",
+  completed: "已完成",
+  failed: "失败",
+};
+
+const statusColors: Record<string, string> = {
+  pending: "#9a9a9a",
+  running: "#1f1f1f",
+  completed: "#27ae60",
+  failed: "#e74c3c",
+};
+</script>
 
 <style lang="scss" scoped>
 .task-list-panel {

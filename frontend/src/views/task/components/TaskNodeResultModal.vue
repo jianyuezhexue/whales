@@ -1,3 +1,130 @@
+<template>
+  <div class="modal-overlay" @click.self="emit('close')">
+    <div class="modal-panel result-modal">
+      <div class="modal-header">
+        <div class="modal-title-row">
+          <svg
+            class="modal-node-icon"
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+          <span class="modal-node-name">{{ nodeName }}</span>
+          <span
+            class="node-status-badge"
+            :class="'status-' + nodeResult.status"
+          >
+            {{ nodeResult.status }}
+          </span>
+        </div>
+        <div class="modal-header-meta">
+          <span v-if="duration" class="meta-duration">{{ duration }}</span>
+          <span v-if="nodeResult.auiId" class="meta-renderer">
+            {{ isPlugin ? 'plugin' : 'builtin' }}:{{ nodeResult.auiId.split(':')[1] }}
+          </span>
+        </div>
+        <div class="modal-actions">
+          <button
+            :class="['view-toggle-btn', { active: viewMode === 'rendered' }]"
+            :disabled="!hasRenderedView"
+            @click="viewMode = 'rendered'"
+          >
+            {{ t("taskboard.view-rendered") }}
+          </button>
+          <button
+            :class="['view-toggle-btn', { active: viewMode === 'json' }]"
+            :disabled="!hasDataView"
+            @click="viewMode = 'json'"
+          >
+            JSON
+          </button>
+          <button class="close-btn" @click="emit('close')">
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <!-- Plugin loading -->
+        <div v-if="isPluginLoading" class="loading-state">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spinner">
+            <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
+          </svg>
+          <span>Loading renderer...</span>
+        </div>
+
+        <!-- Plugin load error -->
+        <div v-else-if="pluginLoadError && viewMode === 'rendered'" class="error-state">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#e74c3c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
+          </svg>
+          <span>{{ pluginLoadError }}</span>
+          <button class="fallback-json-btn" @click="viewMode = 'json'">
+            {{ t("taskboard.view-json") }}
+          </button>
+        </div>
+
+        <!-- Rendered view -->
+        <div v-else-if="viewMode === 'rendered' && virtualAui" class="render-area">
+          <AuiRenderer :aui="virtualAui" :data="nodeResult.auiData" />
+        </div>
+
+        <!-- JSON view -->
+        <div v-else-if="viewMode === 'json' && nodeResult.auiData" class="json-area">
+          <pre class="json-block">{{ jsonPreview }}</pre>
+        </div>
+
+        <!-- No data -->
+        <div v-else class="no-data">
+          <svg
+            viewBox="0 0 24 24"
+            width="32"
+            height="32"
+            fill="none"
+            stroke="#d0d0d0"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <line x1="8" y1="12" x2="16" y2="12" />
+          </svg>
+          <span>{{ t("taskboard.result-empty") }}</span>
+          <button
+            v-if="hasDataView && viewMode === 'rendered'"
+            class="fallback-json-btn"
+            @click="viewMode = 'json'"
+          >
+            {{ t("taskboard.view-json") }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
@@ -139,133 +266,6 @@ onBeforeUnmount(() => {
   }
 });
 </script>
-
-<template>
-  <div class="modal-overlay" @click.self="emit('close')">
-    <div class="modal-panel result-modal">
-      <div class="modal-header">
-        <div class="modal-title-row">
-          <svg
-            class="modal-node-icon"
-            viewBox="0 0 24 24"
-            width="16"
-            height="16"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-          </svg>
-          <span class="modal-node-name">{{ nodeName }}</span>
-          <span
-            class="node-status-badge"
-            :class="'status-' + nodeResult.status"
-          >
-            {{ nodeResult.status }}
-          </span>
-        </div>
-        <div class="modal-header-meta">
-          <span v-if="duration" class="meta-duration">{{ duration }}</span>
-          <span v-if="nodeResult.auiId" class="meta-renderer">
-            {{ isPlugin ? 'plugin' : 'builtin' }}:{{ nodeResult.auiId.split(':')[1] }}
-          </span>
-        </div>
-        <div class="modal-actions">
-          <button
-            :class="['view-toggle-btn', { active: viewMode === 'rendered' }]"
-            :disabled="!hasRenderedView"
-            @click="viewMode = 'rendered'"
-          >
-            {{ t("taskboard.view-rendered") }}
-          </button>
-          <button
-            :class="['view-toggle-btn', { active: viewMode === 'json' }]"
-            :disabled="!hasDataView"
-            @click="viewMode = 'json'"
-          >
-            JSON
-          </button>
-          <button class="close-btn" @click="emit('close')">
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <div class="modal-body">
-        <!-- Plugin loading -->
-        <div v-if="isPluginLoading" class="loading-state">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spinner">
-            <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
-          </svg>
-          <span>Loading renderer...</span>
-        </div>
-
-        <!-- Plugin load error -->
-        <div v-else-if="pluginLoadError && viewMode === 'rendered'" class="error-state">
-          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#e74c3c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="15" y1="9" x2="9" y2="15" />
-            <line x1="9" y1="9" x2="15" y2="15" />
-          </svg>
-          <span>{{ pluginLoadError }}</span>
-          <button class="fallback-json-btn" @click="viewMode = 'json'">
-            {{ t("taskboard.view-json") }}
-          </button>
-        </div>
-
-        <!-- Rendered view -->
-        <div v-else-if="viewMode === 'rendered' && virtualAui" class="render-area">
-          <AuiRenderer :aui="virtualAui" :data="nodeResult.auiData" />
-        </div>
-
-        <!-- JSON view -->
-        <div v-else-if="viewMode === 'json' && nodeResult.auiData" class="json-area">
-          <pre class="json-block">{{ jsonPreview }}</pre>
-        </div>
-
-        <!-- No data -->
-        <div v-else class="no-data">
-          <svg
-            viewBox="0 0 24 24"
-            width="32"
-            height="32"
-            fill="none"
-            stroke="#d0d0d0"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-            <line x1="8" y1="12" x2="16" y2="12" />
-          </svg>
-          <span>{{ t("taskboard.result-empty") }}</span>
-          <button
-            v-if="hasDataView && viewMode === 'rendered'"
-            class="fallback-json-btn"
-            @click="viewMode = 'json'"
-          >
-            {{ t("taskboard.view-json") }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
 
 <style lang="scss" scoped>
 .modal-overlay {

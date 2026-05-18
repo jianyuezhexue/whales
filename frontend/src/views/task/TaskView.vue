@@ -1,20 +1,3 @@
-<script lang="ts">
-export default { name: 'TaskView' };
-</script>
-<script setup lang="ts">
-import { useI18n } from "vue-i18n";
-import { useTaskStore } from "@/stores/task";
-import TerminalView from "./components/TerminalView.vue";
-import TaskBoardView from "./components/TaskBoardView.vue";
-
-const { t } = useI18n();
-const taskStore = useTaskStore();
-
-const setViewMode = (mode: "terminal" | "board") => {
-  taskStore.viewMode = mode;
-};
-</script>
-
 <template>
   <div class="task-page page-layout">
     <div class="page-header">
@@ -53,6 +36,23 @@ const setViewMode = (mode: "terminal" | "board") => {
     <TaskBoardView v-show="taskStore.viewMode === 'board'" />
   </div>
 </template>
+
+<script lang="ts">
+export default { name: 'TaskView' };
+</script>
+<script setup lang="ts">
+import { useI18n } from "vue-i18n";
+import { useTaskStore } from "@/stores/task";
+import TerminalView from "./components/TerminalView.vue";
+import TaskBoardView from "./components/TaskBoardView.vue";
+
+const { t } = useI18n();
+const taskStore = useTaskStore();
+
+const setViewMode = (mode: "terminal" | "board") => {
+  taskStore.viewMode = mode;
+};
+</script>
 
 <style lang="scss" scoped>
 .task-page {

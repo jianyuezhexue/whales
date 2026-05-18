@@ -1,3 +1,277 @@
+<template>
+  <div class="agent-page page-layout">
+    <div class="page-header">
+      <h1 class="page-title">{{ t("agentpage.title") }}</h1>
+      <div class="header-actions">
+        <button class="add-btn" type="button" @click="openCreateModal">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>{{ t("agentpage.add") }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div v-if="agents.length === 0" class="empty-state">
+      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#d0d0d0" stroke-width="1.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="4" width="16" height="16" rx="2" />
+        <rect x="9" y="9" width="6" height="6" />
+        <path d="M9 1v3" /><path d="M15 1v3" /><path d="M9 20v3" /><path d="M15 20v3" />
+        <path d="M20 9h3" /><path d="M20 14h3" /><path d="M1 9h3" /><path d="M1 14h3" />
+      </svg>
+      <div class="empty-title">{{ t("agentpage.empty-title") }}</div>
+      <div class="empty-subtitle">{{ t("agentpage.empty-subtitle") }}</div>
+    </div>
+
+    <!-- Agent grid -->
+    <div v-else class="agent-grid">
+      <div v-for="agent in agents" :key="agent.id" class="agent-card">
+        <div class="card-header">
+          <div class="card-avatar">
+            <img :src="agent.avatar" :alt="agent.name" />
+          </div>
+          <div class="card-name">{{ agent.name }}</div>
+          <div class="card-actions">
+            <button class="card-action-btn" type="button" :title="t('agentpage.edit')" @click="openEditModal(agent)">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </button>
+            <button class="card-action-btn card-delete" type="button" :title="t('agentpage.delete')" @click="confirmDelete(agent)">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="card-desc">{{ agent.description }}</div>
+        <div class="card-work">{{ agent.workContent }}</div>
+        <div class="card-tags">
+          <div v-if="agent.skills.length" class="tag-group">
+            <span v-for="skill in agent.skills" :key="skill.id" class="tag" :style="{ '--tag-color': skill.color }">
+              {{ skill.name }}
+            </span>
+          </div>
+          <div v-if="agent.mcps.length" class="tag-group">
+            <span v-for="mcp in agent.mcps" :key="mcp.id" class="tag tag-mcp" :style="{ '--tag-color': mcp.color }">
+              {{ mcp.name }}
+            </span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="card-date">{{ formatDate(agent.createdAt) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create modal -->
+    <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
+      <div class="modal-panel" ref="createModalRef">
+        <div class="modal-title">{{ t("agentpage.add") }}</div>
+        <div class="modal-body">
+          <!-- Avatar + Name on same row -->
+          <div class="form-row">
+            <div class="avatar-field-compact">
+              <div class="avatar-preview">
+                <img
+                  v-if="newAgent.name.trim()"
+                  :src="getAvatarUrl(newAgent.name.trim())"
+                  alt="avatar preview"
+                />
+                <svg v-else viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#d0d0d0" stroke-width="1.5">
+                  <rect x="4" y="4" width="16" height="16" rx="2" />
+                  <rect x="9" y="9" width="6" height="6" />
+                </svg>
+              </div>
+            </div>
+            <div class="form-field form-field-flex">
+              <!-- <label class="form-label">{{ t("agentpage.name") }}</label> -->
+              <input v-model="newAgent.name" class="form-input" type="text" :placeholder="t('agentpage.name-placeholder')" />
+            </div>
+          </div>
+          <div class="form-field">
+            <label class="form-label">{{ t("agentpage.description") }}</label>
+            <textarea v-model="newAgent.description" class="form-input form-textarea" :placeholder="t('agentpage.desc-placeholder')" rows="2"></textarea>
+          </div>
+          <div class="form-field">
+            <label class="form-label">{{ t("agentpage.work-content") }}</label>
+            <textarea v-model="newAgent.workContent" class="form-input form-textarea" :placeholder="t('agentpage.work-placeholder')" rows="3"></textarea>
+          </div>
+
+          <!-- Skills multi-select -->
+          <div class="form-field">
+            <label class="form-label">{{ t("agentpage.skills") }}</label>
+            <div class="multi-select" v-click-outside="closeSkillDropdown">
+              <div class="multi-select-trigger" @click="openSkillDropdown">
+                <div class="multi-select-tags">
+                  <span v-for="skill in newSelectedSkills" :key="skill.id" class="tag" :style="{ '--tag-color': skill.color }">
+                    {{ skill.name }}
+                    <span class="tag-remove" @click.stop="toggleNewSkill(skill.id)">&times;</span>
+                  </span>
+                  <span v-if="newSelectedSkills.length === 0" class="multi-select-placeholder">{{ t('agentpage.skills-placeholder') }}</span>
+                </div>
+                <svg class="multi-select-arrow" :class="{ open: skillDropdownOpen }" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+              <div v-if="skillDropdownOpen" class="multi-select-dropdown" :class="{ dropup: skillDropup }">
+                <div v-for="skill in allSkills" :key="skill.id" class="multi-select-option" :class="{ selected: newAgent.skillIds.includes(skill.id) }" @click="toggleNewSkill(skill.id)">
+                  <span class="option-check">
+                    <svg v-if="newAgent.skillIds.includes(skill.id)" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  </span>
+                  <span class="option-dot" :style="{ backgroundColor: skill.color }"></span>
+                  {{ skill.name }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MCP multi-select -->
+          <div class="form-field">
+            <label class="form-label">{{ t("agentpage.mcp") }}</label>
+            <div class="multi-select" v-click-outside="closeMcpDropdown">
+              <div class="multi-select-trigger" @click="openMcpDropdown">
+                <div class="multi-select-tags">
+                  <span v-for="mcp in newSelectedMcps" :key="mcp.id" class="tag tag-mcp" :style="{ '--tag-color': mcp.color }">
+                    {{ mcp.name }}
+                    <span class="tag-remove" @click.stop="toggleNewMcp(mcp.id)">&times;</span>
+                  </span>
+                  <span v-if="newSelectedMcps.length === 0" class="multi-select-placeholder">{{ t('agentpage.mcp-placeholder') }}</span>
+                </div>
+                <svg class="multi-select-arrow" :class="{ open: mcpDropdownOpen }" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+              <div v-if="mcpDropdownOpen" class="multi-select-dropdown" :class="{ dropup: mcpDropup }">
+                <div v-for="mcp in allMcps" :key="mcp.id" class="multi-select-option" :class="{ selected: newAgent.mcpIds.includes(mcp.id) }" @click="toggleNewMcp(mcp.id)">
+                  <span class="option-check">
+                    <svg v-if="newAgent.mcpIds.includes(mcp.id)" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  </span>
+                  <span class="option-dot" :style="{ backgroundColor: mcp.color }"></span>
+                  {{ mcp.name }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-cancel" type="button" @click="showCreateModal = false">{{ t("agentpage.cancel") }}</button>
+          <button class="btn btn-confirm" type="button" @click="createAgent">{{ t("agentpage.confirm") }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit modal -->
+    <div v-if="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
+      <div class="modal-panel" ref="editModalRef">
+        <div class="modal-title">{{ t("agentpage.edit") }}</div>
+        <div class="modal-body">
+          <!-- Avatar + Name on same row -->
+          <div class="form-row">
+            <div class="avatar-field-compact">
+              <div class="avatar-preview">
+                <img v-if="editForm.name.trim()" :src="getAvatarUrl(editForm.name.trim())" alt="avatar preview" />
+                <svg v-else viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#d0d0d0" stroke-width="1.5">
+                  <rect x="4" y="4" width="16" height="16" rx="2" />
+                  <rect x="9" y="9" width="6" height="6" />
+                </svg>
+              </div>
+            </div>
+            <div class="form-field form-field-flex">
+              <!-- <label class="form-label">{{ t("agentpage.name") }}</label> -->
+              <input v-model="editForm.name" class="form-input" type="text" :placeholder="t('agentpage.name-placeholder')" />
+            </div>
+          </div>
+          <div class="form-field">
+            <label class="form-label">{{ t("agentpage.description") }}</label>
+            <textarea v-model="editForm.description" class="form-input form-textarea" :placeholder="t('agentpage.desc-placeholder')" rows="2"></textarea>
+          </div>
+          <div class="form-field">
+            <label class="form-label">{{ t("agentpage.work-content") }}</label>
+            <textarea v-model="editForm.workContent" class="form-input form-textarea" :placeholder="t('agentpage.work-placeholder')" rows="3"></textarea>
+          </div>
+
+          <!-- Skills multi-select -->
+          <div class="form-field">
+            <label class="form-label">{{ t("agentpage.skills") }}</label>
+            <div class="multi-select" v-click-outside="closeEditSkillDropdown">
+              <div class="multi-select-trigger" @click="openEditSkillDropdown">
+                <div class="multi-select-tags">
+                  <span v-for="skill in editSelectedSkills" :key="skill.id" class="tag" :style="{ '--tag-color': skill.color }">
+                    {{ skill.name }}
+                    <span class="tag-remove" @click.stop="toggleEditSkill(skill.id)">&times;</span>
+                  </span>
+                  <span v-if="editSelectedSkills.length === 0" class="multi-select-placeholder">{{ t('agentpage.skills-placeholder') }}</span>
+                </div>
+                <svg class="multi-select-arrow" :class="{ open: editSkillDropdownOpen }" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+              <div v-if="editSkillDropdownOpen" class="multi-select-dropdown" :class="{ dropup: editSkillDropup }">
+                <div v-for="skill in allSkills" :key="skill.id" class="multi-select-option" :class="{ selected: editForm.skillIds.includes(skill.id) }" @click="toggleEditSkill(skill.id)">
+                  <span class="option-check">
+                    <svg v-if="editForm.skillIds.includes(skill.id)" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  </span>
+                  <span class="option-dot" :style="{ backgroundColor: skill.color }"></span>
+                  {{ skill.name }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MCP multi-select -->
+          <div class="form-field">
+            <label class="form-label">{{ t("agentpage.mcp") }}</label>
+            <div class="multi-select" v-click-outside="closeEditMcpDropdown">
+              <div class="multi-select-trigger" @click="openEditMcpDropdown">
+                <div class="multi-select-tags">
+                  <span v-for="mcp in editSelectedMcps" :key="mcp.id" class="tag tag-mcp" :style="{ '--tag-color': mcp.color }">
+                    {{ mcp.name }}
+                    <span class="tag-remove" @click.stop="toggleEditMcp(mcp.id)">&times;</span>
+                  </span>
+                  <span v-if="editSelectedMcps.length === 0" class="multi-select-placeholder">{{ t('agentpage.mcp-placeholder') }}</span>
+                </div>
+                <svg class="multi-select-arrow" :class="{ open: editMcpDropdownOpen }" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+              <div v-if="editMcpDropdownOpen" class="multi-select-dropdown" :class="{ dropup: editMcpDropup }">
+                <div v-for="mcp in allMcps" :key="mcp.id" class="multi-select-option" :class="{ selected: editForm.mcpIds.includes(mcp.id) }" @click="toggleEditMcp(mcp.id)">
+                  <span class="option-check">
+                    <svg v-if="editForm.mcpIds.includes(mcp.id)" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  </span>
+                  <span class="option-dot" :style="{ backgroundColor: mcp.color }"></span>
+                  {{ mcp.name }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-cancel" type="button" @click="showEditModal = false">{{ t("agentpage.cancel") }}</button>
+          <button class="btn btn-confirm" type="button" @click="updateAgent">{{ t("agentpage.confirm") }}</button>
+        </div>
+      </div>
+    </div>
+
+    <ConfirmModal
+      v-if="showDeleteModal"
+      :title="t('agentpage.delete-confirm-title')"
+      :message="t('agentpage.delete-confirm-msg', { name: deletingAgent?.name })"
+      :confirm-text="t('agentpage.delete')"
+      :danger="true"
+      @confirm="onDeleteConfirm"
+      @cancel="onDeleteCancel"
+    />
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, computed, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
@@ -321,280 +595,6 @@ const openEditMcpDropdown = (e: MouseEvent) => {
   }
 };
 </script>
-
-<template>
-  <div class="agent-page page-layout">
-    <div class="page-header">
-      <h1 class="page-title">{{ t("agentpage.title") }}</h1>
-      <div class="header-actions">
-        <button class="add-btn" type="button" @click="openCreateModal">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          <span>{{ t("agentpage.add") }}</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Empty state -->
-    <div v-if="agents.length === 0" class="empty-state">
-      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#d0d0d0" stroke-width="1.5"
-        stroke-linecap="round" stroke-linejoin="round">
-        <rect x="4" y="4" width="16" height="16" rx="2" />
-        <rect x="9" y="9" width="6" height="6" />
-        <path d="M9 1v3" /><path d="M15 1v3" /><path d="M9 20v3" /><path d="M15 20v3" />
-        <path d="M20 9h3" /><path d="M20 14h3" /><path d="M1 9h3" /><path d="M1 14h3" />
-      </svg>
-      <div class="empty-title">{{ t("agentpage.empty-title") }}</div>
-      <div class="empty-subtitle">{{ t("agentpage.empty-subtitle") }}</div>
-    </div>
-
-    <!-- Agent grid -->
-    <div v-else class="agent-grid">
-      <div v-for="agent in agents" :key="agent.id" class="agent-card">
-        <div class="card-header">
-          <div class="card-avatar">
-            <img :src="agent.avatar" :alt="agent.name" />
-          </div>
-          <div class="card-name">{{ agent.name }}</div>
-          <div class="card-actions">
-            <button class="card-action-btn" type="button" :title="t('agentpage.edit')" @click="openEditModal(agent)">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
-            </button>
-            <button class="card-action-btn card-delete" type="button" :title="t('agentpage.delete')" @click="confirmDelete(agent)">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div class="card-desc">{{ agent.description }}</div>
-        <div class="card-work">{{ agent.workContent }}</div>
-        <div class="card-tags">
-          <div v-if="agent.skills.length" class="tag-group">
-            <span v-for="skill in agent.skills" :key="skill.id" class="tag" :style="{ '--tag-color': skill.color }">
-              {{ skill.name }}
-            </span>
-          </div>
-          <div v-if="agent.mcps.length" class="tag-group">
-            <span v-for="mcp in agent.mcps" :key="mcp.id" class="tag tag-mcp" :style="{ '--tag-color': mcp.color }">
-              {{ mcp.name }}
-            </span>
-          </div>
-        </div>
-        <div class="card-footer">
-          <span class="card-date">{{ formatDate(agent.createdAt) }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Create modal -->
-    <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
-      <div class="modal-panel" ref="createModalRef">
-        <div class="modal-title">{{ t("agentpage.add") }}</div>
-        <div class="modal-body">
-          <!-- Avatar + Name on same row -->
-          <div class="form-row">
-            <div class="avatar-field-compact">
-              <div class="avatar-preview">
-                <img
-                  v-if="newAgent.name.trim()"
-                  :src="getAvatarUrl(newAgent.name.trim())"
-                  alt="avatar preview"
-                />
-                <svg v-else viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#d0d0d0" stroke-width="1.5">
-                  <rect x="4" y="4" width="16" height="16" rx="2" />
-                  <rect x="9" y="9" width="6" height="6" />
-                </svg>
-              </div>
-            </div>
-            <div class="form-field form-field-flex">
-              <!-- <label class="form-label">{{ t("agentpage.name") }}</label> -->
-              <input v-model="newAgent.name" class="form-input" type="text" :placeholder="t('agentpage.name-placeholder')" />
-            </div>
-          </div>
-          <div class="form-field">
-            <label class="form-label">{{ t("agentpage.description") }}</label>
-            <textarea v-model="newAgent.description" class="form-input form-textarea" :placeholder="t('agentpage.desc-placeholder')" rows="2"></textarea>
-          </div>
-          <div class="form-field">
-            <label class="form-label">{{ t("agentpage.work-content") }}</label>
-            <textarea v-model="newAgent.workContent" class="form-input form-textarea" :placeholder="t('agentpage.work-placeholder')" rows="3"></textarea>
-          </div>
-
-          <!-- Skills multi-select -->
-          <div class="form-field">
-            <label class="form-label">{{ t("agentpage.skills") }}</label>
-            <div class="multi-select" v-click-outside="closeSkillDropdown">
-              <div class="multi-select-trigger" @click="openSkillDropdown">
-                <div class="multi-select-tags">
-                  <span v-for="skill in newSelectedSkills" :key="skill.id" class="tag" :style="{ '--tag-color': skill.color }">
-                    {{ skill.name }}
-                    <span class="tag-remove" @click.stop="toggleNewSkill(skill.id)">&times;</span>
-                  </span>
-                  <span v-if="newSelectedSkills.length === 0" class="multi-select-placeholder">{{ t('agentpage.skills-placeholder') }}</span>
-                </div>
-                <svg class="multi-select-arrow" :class="{ open: skillDropdownOpen }" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </div>
-              <div v-if="skillDropdownOpen" class="multi-select-dropdown" :class="{ dropup: skillDropup }">
-                <div v-for="skill in allSkills" :key="skill.id" class="multi-select-option" :class="{ selected: newAgent.skillIds.includes(skill.id) }" @click="toggleNewSkill(skill.id)">
-                  <span class="option-check">
-                    <svg v-if="newAgent.skillIds.includes(skill.id)" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                  </span>
-                  <span class="option-dot" :style="{ backgroundColor: skill.color }"></span>
-                  {{ skill.name }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- MCP multi-select -->
-          <div class="form-field">
-            <label class="form-label">{{ t("agentpage.mcp") }}</label>
-            <div class="multi-select" v-click-outside="closeMcpDropdown">
-              <div class="multi-select-trigger" @click="openMcpDropdown">
-                <div class="multi-select-tags">
-                  <span v-for="mcp in newSelectedMcps" :key="mcp.id" class="tag tag-mcp" :style="{ '--tag-color': mcp.color }">
-                    {{ mcp.name }}
-                    <span class="tag-remove" @click.stop="toggleNewMcp(mcp.id)">&times;</span>
-                  </span>
-                  <span v-if="newSelectedMcps.length === 0" class="multi-select-placeholder">{{ t('agentpage.mcp-placeholder') }}</span>
-                </div>
-                <svg class="multi-select-arrow" :class="{ open: mcpDropdownOpen }" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </div>
-              <div v-if="mcpDropdownOpen" class="multi-select-dropdown" :class="{ dropup: mcpDropup }">
-                <div v-for="mcp in allMcps" :key="mcp.id" class="multi-select-option" :class="{ selected: newAgent.mcpIds.includes(mcp.id) }" @click="toggleNewMcp(mcp.id)">
-                  <span class="option-check">
-                    <svg v-if="newAgent.mcpIds.includes(mcp.id)" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                  </span>
-                  <span class="option-dot" :style="{ backgroundColor: mcp.color }"></span>
-                  {{ mcp.name }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-cancel" type="button" @click="showCreateModal = false">{{ t("agentpage.cancel") }}</button>
-          <button class="btn btn-confirm" type="button" @click="createAgent">{{ t("agentpage.confirm") }}</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Edit modal -->
-    <div v-if="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
-      <div class="modal-panel" ref="editModalRef">
-        <div class="modal-title">{{ t("agentpage.edit") }}</div>
-        <div class="modal-body">
-          <!-- Avatar + Name on same row -->
-          <div class="form-row">
-            <div class="avatar-field-compact">
-              <div class="avatar-preview">
-                <img v-if="editForm.name.trim()" :src="getAvatarUrl(editForm.name.trim())" alt="avatar preview" />
-                <svg v-else viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#d0d0d0" stroke-width="1.5">
-                  <rect x="4" y="4" width="16" height="16" rx="2" />
-                  <rect x="9" y="9" width="6" height="6" />
-                </svg>
-              </div>
-            </div>
-            <div class="form-field form-field-flex">
-              <!-- <label class="form-label">{{ t("agentpage.name") }}</label> -->
-              <input v-model="editForm.name" class="form-input" type="text" :placeholder="t('agentpage.name-placeholder')" />
-            </div>
-          </div>
-          <div class="form-field">
-            <label class="form-label">{{ t("agentpage.description") }}</label>
-            <textarea v-model="editForm.description" class="form-input form-textarea" :placeholder="t('agentpage.desc-placeholder')" rows="2"></textarea>
-          </div>
-          <div class="form-field">
-            <label class="form-label">{{ t("agentpage.work-content") }}</label>
-            <textarea v-model="editForm.workContent" class="form-input form-textarea" :placeholder="t('agentpage.work-placeholder')" rows="3"></textarea>
-          </div>
-
-          <!-- Skills multi-select -->
-          <div class="form-field">
-            <label class="form-label">{{ t("agentpage.skills") }}</label>
-            <div class="multi-select" v-click-outside="closeEditSkillDropdown">
-              <div class="multi-select-trigger" @click="openEditSkillDropdown">
-                <div class="multi-select-tags">
-                  <span v-for="skill in editSelectedSkills" :key="skill.id" class="tag" :style="{ '--tag-color': skill.color }">
-                    {{ skill.name }}
-                    <span class="tag-remove" @click.stop="toggleEditSkill(skill.id)">&times;</span>
-                  </span>
-                  <span v-if="editSelectedSkills.length === 0" class="multi-select-placeholder">{{ t('agentpage.skills-placeholder') }}</span>
-                </div>
-                <svg class="multi-select-arrow" :class="{ open: editSkillDropdownOpen }" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </div>
-              <div v-if="editSkillDropdownOpen" class="multi-select-dropdown" :class="{ dropup: editSkillDropup }">
-                <div v-for="skill in allSkills" :key="skill.id" class="multi-select-option" :class="{ selected: editForm.skillIds.includes(skill.id) }" @click="toggleEditSkill(skill.id)">
-                  <span class="option-check">
-                    <svg v-if="editForm.skillIds.includes(skill.id)" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                  </span>
-                  <span class="option-dot" :style="{ backgroundColor: skill.color }"></span>
-                  {{ skill.name }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- MCP multi-select -->
-          <div class="form-field">
-            <label class="form-label">{{ t("agentpage.mcp") }}</label>
-            <div class="multi-select" v-click-outside="closeEditMcpDropdown">
-              <div class="multi-select-trigger" @click="openEditMcpDropdown">
-                <div class="multi-select-tags">
-                  <span v-for="mcp in editSelectedMcps" :key="mcp.id" class="tag tag-mcp" :style="{ '--tag-color': mcp.color }">
-                    {{ mcp.name }}
-                    <span class="tag-remove" @click.stop="toggleEditMcp(mcp.id)">&times;</span>
-                  </span>
-                  <span v-if="editSelectedMcps.length === 0" class="multi-select-placeholder">{{ t('agentpage.mcp-placeholder') }}</span>
-                </div>
-                <svg class="multi-select-arrow" :class="{ open: editMcpDropdownOpen }" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </div>
-              <div v-if="editMcpDropdownOpen" class="multi-select-dropdown" :class="{ dropup: editMcpDropup }">
-                <div v-for="mcp in allMcps" :key="mcp.id" class="multi-select-option" :class="{ selected: editForm.mcpIds.includes(mcp.id) }" @click="toggleEditMcp(mcp.id)">
-                  <span class="option-check">
-                    <svg v-if="editForm.mcpIds.includes(mcp.id)" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                  </span>
-                  <span class="option-dot" :style="{ backgroundColor: mcp.color }"></span>
-                  {{ mcp.name }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-cancel" type="button" @click="showEditModal = false">{{ t("agentpage.cancel") }}</button>
-          <button class="btn btn-confirm" type="button" @click="updateAgent">{{ t("agentpage.confirm") }}</button>
-        </div>
-      </div>
-    </div>
-
-    <ConfirmModal
-      v-if="showDeleteModal"
-      :title="t('agentpage.delete-confirm-title')"
-      :message="t('agentpage.delete-confirm-msg', { name: deletingAgent?.name })"
-      :confirm-text="t('agentpage.delete')"
-      :danger="true"
-      @confirm="onDeleteConfirm"
-      @cancel="onDeleteCancel"
-    />
-  </div>
-</template>
 
 <style lang="scss" scoped>
 .agent-page {

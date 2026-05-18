@@ -1,384 +1,3 @@
-<script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { useI18n } from "vue-i18n";
-import { useRoute, useRouter } from "vue-router";
-import { useWorkflowStore, ALL_SKILLS, ALL_AGENTS, ALL_EXECUTION_MODES, BUILTIN_AUI_OPTIONS, getAllAuiOptions, resolveAuiName } from "@/stores/workflow";
-import type { WorkflowNode } from "@/stores/workflow";
-import { useAuiStore } from "@/stores/aui";
-import { useAuiPluginStore } from "@/stores/auiPlugin";
-import ConfirmModal from "@/components/ConfirmModal.vue";
-import AuiRenderer from "@/components/aui/AuiRenderer.vue";
-
-const { t } = useI18n();
-const route = useRoute();
-const router = useRouter();
-const store = useWorkflowStore();
-const auiStore = useAuiStore();
-const pluginStore = useAuiPluginStore();
-
-// Computed AUI options combining built-in + instances + plugins
-const auiOptions = computed(() => getAllAuiOptions(auiStore.auiList, pluginStore.installedPlugins));
-
-// --- Load group from route ---
-onMounted(() => {
-  const groupId = route.params.groupId as string;
-  if (groupId) {
-    store.setCurrentGroup(groupId);
-  }
-});
-
-// --- Node selection ---
-const selectedNodeId = ref<string | null>(null);
-
-// --- Search ---
-const searchQuery = ref("");
-
-// --- Modals: Workflow ---
-const showNewWorkflowModal = ref(false);
-const newWorkflowName = ref("");
-const newWorkflowDesc = ref("");
-const newWorkflowNodeIds = ref<string[]>([]);
-const newWorkflowNodeDropdownOpen = ref(false);
-
-// --- Modals: Add Node ---
-const showAddNodeModal = ref(false);
-const addNodeTab = ref<"create" | "import">("import");
-
-// Create tab
-const newNodeName = ref("");
-const newNodeDesc = ref("");
-const newNodeContent = ref("");
-const newNodeSkills = ref<string[]>([]);
-const newNodeAgents = ref<string[]>([]);
-const newNodeAuiId = ref("");
-const newNodeRequireAudit = ref(false);
-const newNodeExecutionMode = ref("default");
-const newNodeAfter = ref("last");
-const skillDropdownOpen = ref(false);
-const agentDropdownOpen = ref(false);
-
-// Import tab
-const importSearchQuery = ref("");
-const selectedImportNodeId = ref("");
-
-const filteredImportNodes = computed(() => {
-  if (!importSearchQuery.value) return store.nodeLibrary;
-  const q = importSearchQuery.value.toLowerCase();
-  return store.nodeLibrary.filter(
-    (n) =>
-      n.name.toLowerCase().includes(q) ||
-      n.desc.toLowerCase().includes(q)
-  );
-});
-
-// --- Node editor (double-click modal) ---
-const showNodeEditorModal = ref(false);
-const editingNode = ref<WorkflowNode | null>(null);
-const editedName = ref("");
-const editedDesc = ref("");
-const editedContent = ref("");
-const editedSkills = ref<string[]>([]);
-const editedAgents = ref<string[]>([]);
-const editedAuiId = ref("");
-const editedRequireAudit = ref(false);
-const editedExecutionMode = ref("default");
-const editorSkillDropdownOpen = ref(false);
-const editorAgentDropdownOpen = ref(false);
-
-// --- Delete ---
-const showDeleteNodeModal = ref(false);
-const deletingNode = ref<WorkflowNode | null>(null);
-
-const showDeleteWorkflowModal = ref(false);
-const deletingWorkflowName = ref("");
-
-// --- Drag state ---
-const dragNodeId = ref<string | null>(null);
-
-// --- Gantt Test Modal ---
-const showGanttTestModal = ref(false);
-const ganttTestViewMode = ref<"rendered" | "json">("rendered");
-
-// Hardcoded Gantt plugin data so the test button always works
-const GANTT_DATA_SCHEMA = {
-  type: "array",
-  items: {
-    type: "object",
-    required: ["title", "startDate", "endDate"],
-    properties: {
-      title: { type: "string", title: "任务名称" },
-      startDate: { type: "string", format: "date", title: "开始日期" },
-      endDate: { type: "string", format: "date", title: "结束日期" },
-      progress: { type: "number", title: "进度(%)" },
-      color: { type: "string", title: "颜色" },
-    },
-  },
-};
-
-const GANTT_SAMPLE_DATA = [
-  { title: "需求分析", startDate: "2025-01-01", endDate: "2025-01-15", progress: 100, color: "#6366f1" },
-  { title: "技术方案", startDate: "2025-01-10", endDate: "2025-01-25", progress: 60, color: "#8b5cf6" },
-  { title: "开发实现", startDate: "2025-01-20", endDate: "2025-02-15", progress: 30, color: "#0ea5e9" },
-  { title: "测试验收", startDate: "2025-02-10", endDate: "2025-02-28", progress: 0, color: "#14b8a6" },
-];
-
-const ganttTestAui = {
-  id: "gantt",
-  name: "甘特图",
-  description: "项目进度甘特图渲染器",
-  rendererType: "gantt",
-  fields: [],
-  jsonSchema: GANTT_DATA_SCHEMA,
-  sampleData: GANTT_SAMPLE_DATA,
-  aiPrompt: "",
-  createdAt: "",
-  updatedAt: "",
-};
-
-function openGanttTestModal() {
-  // Ensure the gantt plugin JS is injected into the DOM
-  pluginStore.injectPlugin("gantt");
-  ganttTestViewMode.value = "rendered";
-  showGanttTestModal.value = true;
-}
-
-// --- Computed ---
-const filteredWorkflows = computed(() => {
-  if (!searchQuery.value) return store.groupWorkflows;
-  const q = searchQuery.value.toLowerCase();
-  return store.groupWorkflows.filter(
-    (w) => w.name.toLowerCase().includes(q) || w.desc.toLowerCase().includes(q)
-  );
-});
-
-const sortedNodes = computed(() => {
-  if (!store.currentWorkflow) return [];
-  return [...store.currentWorkflow.nodes].sort((a, b) => a.order - b.order);
-});
-
-const importableNodes = computed(() => store.nodeLibrary);
-
-const selectedImportNode = computed(() => {
-  if (!selectedImportNodeId.value) return null;
-  return store.nodeLibrary.find((n) => n.id === selectedImportNodeId.value) ?? null;
-});
-
-// --- Navigation ---
-function goBack() {
-  router.push("/workflow");
-}
-
-// --- Workflow actions ---
-function selectWorkflow(id: string) {
-  store.setCurrentWorkflow(id);
-  selectedNodeId.value = null;
-}
-
-function openNewWorkflowModal() {
-  newWorkflowName.value = "";
-  newWorkflowDesc.value = "";
-  newWorkflowNodeIds.value = [];
-  newWorkflowNodeDropdownOpen.value = false;
-  showNewWorkflowModal.value = true;
-}
-
-function createWorkflow() {
-  const name = newWorkflowName.value.trim();
-  if (!name) return;
-  store.addWorkflow(name, newWorkflowDesc.value.trim(), newWorkflowNodeIds.value);
-  showNewWorkflowModal.value = false;
-}
-
-function confirmDeleteWorkflow() {
-  deletingWorkflowName.value = store.currentWorkflow?.name ?? "";
-  showDeleteWorkflowModal.value = true;
-}
-
-function onDeleteWorkflowConfirm() {
-  store.deleteWorkflow(store.currentWorkflowId);
-  selectedNodeId.value = null;
-  showDeleteWorkflowModal.value = false;
-}
-
-// --- Node actions ---
-function selectNode(id: string) {
-  selectedNodeId.value = id;
-}
-
-function openNodeEditor(node: WorkflowNode) {
-  editingNode.value = node;
-  editedName.value = node.name;
-  editedDesc.value = node.desc;
-  editedContent.value = node.content;
-  editedSkills.value = [...node.skills];
-  editedAgents.value = [...node.agents];
-  editedAuiId.value = node.aui ?? "";
-  editedRequireAudit.value = node.requireAudit ?? false;
-  editedExecutionMode.value = node.executionMode ?? "default";
-  showNodeEditorModal.value = true;
-}
-
-function saveNodeEditor() {
-  if (!editingNode.value) return;
-  store.updateNode(editingNode.value.id, {
-    name: editedName.value.trim() || editingNode.value.name,
-    desc: editedDesc.value.trim(),
-    content: editedContent.value.trim(),
-    skills: editedSkills.value,
-    agents: editedAgents.value,
-    aui: editedAuiId.value || undefined,
-    requireAudit: editedRequireAudit.value || undefined,
-    executionMode: editedExecutionMode.value || undefined,
-  });
-  showNodeEditorModal.value = false;
-  editingNode.value = null;
-}
-
-function cancelNodeEditor() {
-  showNodeEditorModal.value = false;
-  editingNode.value = null;
-}
-
-// --- Add / Import Node ---
-function openAddNodeModal(tab?: "create" | "import") {
-  addNodeTab.value = tab ?? "import";
-  newNodeName.value = "";
-  newNodeDesc.value = "";
-  newNodeContent.value = "";
-  newNodeSkills.value = [];
-  newNodeAgents.value = [];
-  newNodeAuiId.value = "";
-  newNodeRequireAudit.value = false;
-  newNodeExecutionMode.value = "default";
-  newNodeAfter.value = "last";
-  selectedImportNodeId.value = "";
-  importSearchQuery.value = "";
-  skillDropdownOpen.value = false;
-  agentDropdownOpen.value = false;
-  showAddNodeModal.value = true;
-}
-
-function addNewNode() {
-  const name = newNodeName.value.trim();
-  if (!name || !store.currentWorkflow) return;
-  store.addNode(
-    name,
-    newNodeDesc.value.trim(),
-    newNodeContent.value.trim(),
-    newNodeSkills.value,
-    newNodeAgents.value,
-    newNodeAfter.value,
-    newNodeAuiId.value || undefined,
-    newNodeRequireAudit.value || undefined,
-    newNodeExecutionMode.value || undefined
-  );
-  showAddNodeModal.value = false;
-}
-
-function importNode() {
-  if (!selectedImportNodeId.value || !store.currentWorkflow) return;
-  store.importNodeFromLibrary(selectedImportNodeId.value, newNodeAfter.value);
-  showAddNodeModal.value = false;
-}
-
-function quickImport(nodeId: string) {
-  selectedImportNodeId.value = nodeId;
-  importNode();
-}
-
-function confirmDeleteNode(node: WorkflowNode) {
-  deletingNode.value = node;
-  showDeleteNodeModal.value = true;
-}
-
-function onDeleteNodeConfirm() {
-  if (!deletingNode.value) return;
-  store.deleteNode(deletingNode.value.id);
-  if (selectedNodeId.value === deletingNode.value.id) {
-    selectedNodeId.value = null;
-  }
-  showDeleteNodeModal.value = false;
-  deletingNode.value = null;
-}
-
-function handleRun() {
-  if (!store.currentWorkflow || store.currentWorkflow.nodes.length === 0) return;
-}
-
-// --- Drag and Drop ---
-function onDragStart(e: DragEvent, nodeId: string) {
-  dragNodeId.value = nodeId;
-  if (e.dataTransfer) {
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", nodeId);
-  }
-}
-
-function onDragOver(e: DragEvent) {
-  e.preventDefault();
-  if (e.dataTransfer) {
-    e.dataTransfer.dropEffect = "move";
-  }
-}
-
-function onDrop(e: DragEvent, targetNodeId: string) {
-  e.preventDefault();
-  if (!dragNodeId.value) return;
-  const draggedNode = store.currentWorkflow?.nodes.find((n) => n.id === dragNodeId.value);
-  const targetNode = store.currentWorkflow?.nodes.find((n) => n.id === targetNodeId);
-  if (!draggedNode || !targetNode) return;
-  store.reorderNode(dragNodeId.value, targetNode.order);
-  dragNodeId.value = null;
-}
-
-function onDragEnd() {
-  dragNodeId.value = null;
-}
-
-// --- Helpers ---
-function skillTag(id: string) {
-  return ALL_SKILLS.find((s) => s.id === id);
-}
-
-function agentName(id: string) {
-  return ALL_AGENTS.find((a) => a.id === id);
-}
-
-function auiName(id: string) {
-  return resolveAuiName(id, auiStore.auiList, pluginStore.installedPlugins);
-}
-
-function executionModeName(id: string) {
-  return ALL_EXECUTION_MODES.find((m) => m.id === id);
-}
-
-function nodeLibName(id: string) {
-  return store.nodeLibrary.find((n) => n.id === id)?.name ?? id;
-}
-
-function toggleSkill(skillId: string, list: string[]) {
-  const idx = list.indexOf(skillId);
-  if (idx >= 0) list.splice(idx, 1);
-  else list.push(skillId);
-}
-
-function toggleEditorSkill(skillId: string) {
-  toggleSkill(skillId, editedSkills.value);
-}
-
-function toggleEditorAgent(agentId: string) {
-  toggleSkill(agentId, editedAgents.value);
-}
-
-function toggleNewSkill(skillId: string) {
-  toggleSkill(skillId, newNodeSkills.value);
-}
-
-function toggleNewAgent(agentId: string) {
-  toggleSkill(agentId, newNodeAgents.value);
-}
-</script>
-
 <template>
   <div class="workflow-page page-layout">
     <!-- HEADER -->
@@ -960,6 +579,387 @@ function toggleNewAgent(agentId: string) {
       @confirm="onDeleteWorkflowConfirm" @cancel="showDeleteWorkflowModal = false" />
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
+import { useRoute, useRouter } from "vue-router";
+import { useWorkflowStore, ALL_SKILLS, ALL_AGENTS, ALL_EXECUTION_MODES, BUILTIN_AUI_OPTIONS, getAllAuiOptions, resolveAuiName } from "@/stores/workflow";
+import type { WorkflowNode } from "@/stores/workflow";
+import { useAuiStore } from "@/stores/aui";
+import { useAuiPluginStore } from "@/stores/auiPlugin";
+import ConfirmModal from "@/components/ConfirmModal.vue";
+import AuiRenderer from "@/components/aui/AuiRenderer.vue";
+
+const { t } = useI18n();
+const route = useRoute();
+const router = useRouter();
+const store = useWorkflowStore();
+const auiStore = useAuiStore();
+const pluginStore = useAuiPluginStore();
+
+// Computed AUI options combining built-in + instances + plugins
+const auiOptions = computed(() => getAllAuiOptions(auiStore.auiList, pluginStore.installedPlugins));
+
+// --- Load group from route ---
+onMounted(() => {
+  const groupId = route.params.groupId as string;
+  if (groupId) {
+    store.setCurrentGroup(groupId);
+  }
+});
+
+// --- Node selection ---
+const selectedNodeId = ref<string | null>(null);
+
+// --- Search ---
+const searchQuery = ref("");
+
+// --- Modals: Workflow ---
+const showNewWorkflowModal = ref(false);
+const newWorkflowName = ref("");
+const newWorkflowDesc = ref("");
+const newWorkflowNodeIds = ref<string[]>([]);
+const newWorkflowNodeDropdownOpen = ref(false);
+
+// --- Modals: Add Node ---
+const showAddNodeModal = ref(false);
+const addNodeTab = ref<"create" | "import">("import");
+
+// Create tab
+const newNodeName = ref("");
+const newNodeDesc = ref("");
+const newNodeContent = ref("");
+const newNodeSkills = ref<string[]>([]);
+const newNodeAgents = ref<string[]>([]);
+const newNodeAuiId = ref("");
+const newNodeRequireAudit = ref(false);
+const newNodeExecutionMode = ref("default");
+const newNodeAfter = ref("last");
+const skillDropdownOpen = ref(false);
+const agentDropdownOpen = ref(false);
+
+// Import tab
+const importSearchQuery = ref("");
+const selectedImportNodeId = ref("");
+
+const filteredImportNodes = computed(() => {
+  if (!importSearchQuery.value) return store.nodeLibrary;
+  const q = importSearchQuery.value.toLowerCase();
+  return store.nodeLibrary.filter(
+    (n) =>
+      n.name.toLowerCase().includes(q) ||
+      n.desc.toLowerCase().includes(q)
+  );
+});
+
+// --- Node editor (double-click modal) ---
+const showNodeEditorModal = ref(false);
+const editingNode = ref<WorkflowNode | null>(null);
+const editedName = ref("");
+const editedDesc = ref("");
+const editedContent = ref("");
+const editedSkills = ref<string[]>([]);
+const editedAgents = ref<string[]>([]);
+const editedAuiId = ref("");
+const editedRequireAudit = ref(false);
+const editedExecutionMode = ref("default");
+const editorSkillDropdownOpen = ref(false);
+const editorAgentDropdownOpen = ref(false);
+
+// --- Delete ---
+const showDeleteNodeModal = ref(false);
+const deletingNode = ref<WorkflowNode | null>(null);
+
+const showDeleteWorkflowModal = ref(false);
+const deletingWorkflowName = ref("");
+
+// --- Drag state ---
+const dragNodeId = ref<string | null>(null);
+
+// --- Gantt Test Modal ---
+const showGanttTestModal = ref(false);
+const ganttTestViewMode = ref<"rendered" | "json">("rendered");
+
+// Hardcoded Gantt plugin data so the test button always works
+const GANTT_DATA_SCHEMA = {
+  type: "array",
+  items: {
+    type: "object",
+    required: ["title", "startDate", "endDate"],
+    properties: {
+      title: { type: "string", title: "任务名称" },
+      startDate: { type: "string", format: "date", title: "开始日期" },
+      endDate: { type: "string", format: "date", title: "结束日期" },
+      progress: { type: "number", title: "进度(%)" },
+      color: { type: "string", title: "颜色" },
+    },
+  },
+};
+
+const GANTT_SAMPLE_DATA = [
+  { title: "需求分析", startDate: "2025-01-01", endDate: "2025-01-15", progress: 100, color: "#6366f1" },
+  { title: "技术方案", startDate: "2025-01-10", endDate: "2025-01-25", progress: 60, color: "#8b5cf6" },
+  { title: "开发实现", startDate: "2025-01-20", endDate: "2025-02-15", progress: 30, color: "#0ea5e9" },
+  { title: "测试验收", startDate: "2025-02-10", endDate: "2025-02-28", progress: 0, color: "#14b8a6" },
+];
+
+const ganttTestAui = {
+  id: "gantt",
+  name: "甘特图",
+  description: "项目进度甘特图渲染器",
+  rendererType: "gantt",
+  fields: [],
+  jsonSchema: GANTT_DATA_SCHEMA,
+  sampleData: GANTT_SAMPLE_DATA,
+  aiPrompt: "",
+  createdAt: "",
+  updatedAt: "",
+};
+
+function openGanttTestModal() {
+  // Ensure the gantt plugin JS is injected into the DOM
+  pluginStore.injectPlugin("gantt");
+  ganttTestViewMode.value = "rendered";
+  showGanttTestModal.value = true;
+}
+
+// --- Computed ---
+const filteredWorkflows = computed(() => {
+  if (!searchQuery.value) return store.groupWorkflows;
+  const q = searchQuery.value.toLowerCase();
+  return store.groupWorkflows.filter(
+    (w) => w.name.toLowerCase().includes(q) || w.desc.toLowerCase().includes(q)
+  );
+});
+
+const sortedNodes = computed(() => {
+  if (!store.currentWorkflow) return [];
+  return [...store.currentWorkflow.nodes].sort((a, b) => a.order - b.order);
+});
+
+const importableNodes = computed(() => store.nodeLibrary);
+
+const selectedImportNode = computed(() => {
+  if (!selectedImportNodeId.value) return null;
+  return store.nodeLibrary.find((n) => n.id === selectedImportNodeId.value) ?? null;
+});
+
+// --- Navigation ---
+function goBack() {
+  router.push("/workflow");
+}
+
+// --- Workflow actions ---
+function selectWorkflow(id: string) {
+  store.setCurrentWorkflow(id);
+  selectedNodeId.value = null;
+}
+
+function openNewWorkflowModal() {
+  newWorkflowName.value = "";
+  newWorkflowDesc.value = "";
+  newWorkflowNodeIds.value = [];
+  newWorkflowNodeDropdownOpen.value = false;
+  showNewWorkflowModal.value = true;
+}
+
+function createWorkflow() {
+  const name = newWorkflowName.value.trim();
+  if (!name) return;
+  store.addWorkflow(name, newWorkflowDesc.value.trim(), newWorkflowNodeIds.value);
+  showNewWorkflowModal.value = false;
+}
+
+function confirmDeleteWorkflow() {
+  deletingWorkflowName.value = store.currentWorkflow?.name ?? "";
+  showDeleteWorkflowModal.value = true;
+}
+
+function onDeleteWorkflowConfirm() {
+  store.deleteWorkflow(store.currentWorkflowId);
+  selectedNodeId.value = null;
+  showDeleteWorkflowModal.value = false;
+}
+
+// --- Node actions ---
+function selectNode(id: string) {
+  selectedNodeId.value = id;
+}
+
+function openNodeEditor(node: WorkflowNode) {
+  editingNode.value = node;
+  editedName.value = node.name;
+  editedDesc.value = node.desc;
+  editedContent.value = node.content;
+  editedSkills.value = [...node.skills];
+  editedAgents.value = [...node.agents];
+  editedAuiId.value = node.aui ?? "";
+  editedRequireAudit.value = node.requireAudit ?? false;
+  editedExecutionMode.value = node.executionMode ?? "default";
+  showNodeEditorModal.value = true;
+}
+
+function saveNodeEditor() {
+  if (!editingNode.value) return;
+  store.updateNode(editingNode.value.id, {
+    name: editedName.value.trim() || editingNode.value.name,
+    desc: editedDesc.value.trim(),
+    content: editedContent.value.trim(),
+    skills: editedSkills.value,
+    agents: editedAgents.value,
+    aui: editedAuiId.value || undefined,
+    requireAudit: editedRequireAudit.value || undefined,
+    executionMode: editedExecutionMode.value || undefined,
+  });
+  showNodeEditorModal.value = false;
+  editingNode.value = null;
+}
+
+function cancelNodeEditor() {
+  showNodeEditorModal.value = false;
+  editingNode.value = null;
+}
+
+// --- Add / Import Node ---
+function openAddNodeModal(tab?: "create" | "import") {
+  addNodeTab.value = tab ?? "import";
+  newNodeName.value = "";
+  newNodeDesc.value = "";
+  newNodeContent.value = "";
+  newNodeSkills.value = [];
+  newNodeAgents.value = [];
+  newNodeAuiId.value = "";
+  newNodeRequireAudit.value = false;
+  newNodeExecutionMode.value = "default";
+  newNodeAfter.value = "last";
+  selectedImportNodeId.value = "";
+  importSearchQuery.value = "";
+  skillDropdownOpen.value = false;
+  agentDropdownOpen.value = false;
+  showAddNodeModal.value = true;
+}
+
+function addNewNode() {
+  const name = newNodeName.value.trim();
+  if (!name || !store.currentWorkflow) return;
+  store.addNode(
+    name,
+    newNodeDesc.value.trim(),
+    newNodeContent.value.trim(),
+    newNodeSkills.value,
+    newNodeAgents.value,
+    newNodeAfter.value,
+    newNodeAuiId.value || undefined,
+    newNodeRequireAudit.value || undefined,
+    newNodeExecutionMode.value || undefined
+  );
+  showAddNodeModal.value = false;
+}
+
+function importNode() {
+  if (!selectedImportNodeId.value || !store.currentWorkflow) return;
+  store.importNodeFromLibrary(selectedImportNodeId.value, newNodeAfter.value);
+  showAddNodeModal.value = false;
+}
+
+function quickImport(nodeId: string) {
+  selectedImportNodeId.value = nodeId;
+  importNode();
+}
+
+function confirmDeleteNode(node: WorkflowNode) {
+  deletingNode.value = node;
+  showDeleteNodeModal.value = true;
+}
+
+function onDeleteNodeConfirm() {
+  if (!deletingNode.value) return;
+  store.deleteNode(deletingNode.value.id);
+  if (selectedNodeId.value === deletingNode.value.id) {
+    selectedNodeId.value = null;
+  }
+  showDeleteNodeModal.value = false;
+  deletingNode.value = null;
+}
+
+function handleRun() {
+  if (!store.currentWorkflow || store.currentWorkflow.nodes.length === 0) return;
+}
+
+// --- Drag and Drop ---
+function onDragStart(e: DragEvent, nodeId: string) {
+  dragNodeId.value = nodeId;
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", nodeId);
+  }
+}
+
+function onDragOver(e: DragEvent) {
+  e.preventDefault();
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = "move";
+  }
+}
+
+function onDrop(e: DragEvent, targetNodeId: string) {
+  e.preventDefault();
+  if (!dragNodeId.value) return;
+  const draggedNode = store.currentWorkflow?.nodes.find((n) => n.id === dragNodeId.value);
+  const targetNode = store.currentWorkflow?.nodes.find((n) => n.id === targetNodeId);
+  if (!draggedNode || !targetNode) return;
+  store.reorderNode(dragNodeId.value, targetNode.order);
+  dragNodeId.value = null;
+}
+
+function onDragEnd() {
+  dragNodeId.value = null;
+}
+
+// --- Helpers ---
+function skillTag(id: string) {
+  return ALL_SKILLS.find((s) => s.id === id);
+}
+
+function agentName(id: string) {
+  return ALL_AGENTS.find((a) => a.id === id);
+}
+
+function auiName(id: string) {
+  return resolveAuiName(id, auiStore.auiList, pluginStore.installedPlugins);
+}
+
+function executionModeName(id: string) {
+  return ALL_EXECUTION_MODES.find((m) => m.id === id);
+}
+
+function nodeLibName(id: string) {
+  return store.nodeLibrary.find((n) => n.id === id)?.name ?? id;
+}
+
+function toggleSkill(skillId: string, list: string[]) {
+  const idx = list.indexOf(skillId);
+  if (idx >= 0) list.splice(idx, 1);
+  else list.push(skillId);
+}
+
+function toggleEditorSkill(skillId: string) {
+  toggleSkill(skillId, editedSkills.value);
+}
+
+function toggleEditorAgent(agentId: string) {
+  toggleSkill(agentId, editedAgents.value);
+}
+
+function toggleNewSkill(skillId: string) {
+  toggleSkill(skillId, newNodeSkills.value);
+}
+
+function toggleNewAgent(agentId: string) {
+  toggleSkill(agentId, newNodeAgents.value);
+}
+</script>
 
 <style lang="scss" scoped>
 .workflow-page {

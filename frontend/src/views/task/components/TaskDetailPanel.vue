@@ -1,25 +1,3 @@
-<script setup lang="ts">
-import { ref } from "vue";
-import type { Task } from "./TaskList.vue";
-import TaskTerminal from "./TaskTerminal.vue";
-
-defineProps<{
-  task: Task;
-}>();
-
-const activeTab = ref<"process" | "result">("process");
-const terminalExited = ref(false);
-
-const tabs = [
-  { key: "process" as const, label: "执行过程" },
-  { key: "result" as const, label: "执行结果" },
-];
-
-const onTerminalExited = () => {
-  terminalExited.value = true;
-};
-</script>
-
 <template>
   <div class="detail-panel">
     <div class="tab-header">
@@ -43,6 +21,28 @@ const onTerminalExited = () => {
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref } from "vue";
+import type { Task } from "./TaskList.vue";
+import TaskTerminal from "./TaskTerminal.vue";
+
+defineProps<{
+  task: Task;
+}>();
+
+const activeTab = ref<"process" | "result">("process");
+const terminalExited = ref(false);
+
+const tabs = [
+  { key: "process" as const, label: "执行过程" },
+  { key: "result" as const, label: "执行结果" },
+];
+
+const onTerminalExited = () => {
+  terminalExited.value = true;
+};
+</script>
 
 <style lang="scss" scoped>
 .detail-panel {

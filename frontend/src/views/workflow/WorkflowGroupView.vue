@@ -1,3 +1,171 @@
+<template>
+  <div class="group-view page-layout">
+    <!-- Header -->
+    <div class="page-header">
+      <h1 class="page-title">{{ t("grouppage.title") }}</h1>
+      <div class="header-actions">
+        <div class="header-search">
+          <svg class="search-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input v-model="searchQuery" class="search-input" type="text" :placeholder="t('grouppage.search')" />
+        </div>
+        <button class="outline-btn" type="button" :disabled="importing" @click="importGroup">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <polyline points="19 12 12 19 5 12" />
+          </svg>
+          <span>{{ importing ? "..." : t("grouppage.import") }}</span>
+        </button>
+        <button class="outline-btn" type="button" @click="goToNodes">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
+          </svg>
+          <span>{{ t("grouppage.nodes") }}</span>
+        </button>
+        <button class="add-btn" type="button" @click="openCreateModal">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>{{ t("grouppage.new") }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty -->
+    <div v-if="filteredGroups.length === 0" class="empty-state">
+      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#d0d0d0" stroke-width="1.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <line x1="6" y1="3" x2="6" y2="15" />
+        <circle cx="18" cy="6" r="3" />
+        <circle cx="6" cy="18" r="3" />
+        <path d="M18 9a9 9 0 0 1-9 9" />
+      </svg>
+      <div class="empty-title">{{ t("grouppage.empty-title") }}</div>
+      <div class="empty-subtitle">{{ t("grouppage.empty-subtitle") }}</div>
+    </div>
+
+    <!-- Grid -->
+    <div v-else class="group-grid">
+      <div v-for="group in filteredGroups" :key="group.id"
+        :class="['group-card', { active: group.id === store.currentGroupId }]" @click="enterGroup(group)">
+        <div class="card-top">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="6" y1="3" x2="6" y2="15" />
+              <circle cx="18" cy="6" r="3" />
+              <circle cx="6" cy="18" r="3" />
+              <path d="M18 9a9 9 0 0 1-9 9" />
+            </svg>
+          </div>
+          <div class="card-name">{{ group.name }}</div>
+        </div>
+        <div class="card-desc">{{ group.description }}</div>
+        <div class="card-scenarios" :title="group.scenarios">
+          <span>{{ group.scenarios || t("grouppage.no-workflows") }}</span>
+        </div>
+        <div class="card-footer">
+          <div class="card-meta">
+            <span class="card-date">{{ formatDate(group.createdAt) }}</span>
+            <span class="card-count">{{ group.workflows.length }} {{ t("grouppage.workflow-count") }}</span>
+          </div>
+          <div class="card-actions">
+            <button class="card-btn" type="button" :title="t('grouppage.edit')" @click.stop="openEditModal(group)">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </button>
+            <button class="card-btn" type="button" :title="t('grouppage.export')" @click.stop="openPreview(group)">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </button>
+            <button class="card-btn card-delete" type="button" :title="t('grouppage.delete')" @click.stop="confirmDelete(group)">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div v-if="showCreateModal || showEditModal" class="modal-overlay"
+      @click.self="showCreateModal = false; showEditModal = false">
+      <div class="modal-panel">
+        <div class="modal-title">
+          {{ showCreateModal ? t("grouppage.new") : t("grouppage.edit") }}
+        </div>
+        <div class="modal-body">
+          <div class="form-field">
+            <label class="form-label">{{ t("grouppage.name") }}</label>
+            <input v-model="formName" class="form-input" type="text" :placeholder="t('grouppage.name-placeholder')" />
+          </div>
+          <div class="form-field">
+            <label class="form-label">{{ t("grouppage.desc") }}</label>
+            <textarea v-model="formDesc" class="form-input form-textarea" :placeholder="t('grouppage.desc-placeholder')"
+              rows="3"></textarea>
+          </div>
+          <div class="form-field">
+            <label class="form-label">{{ t("grouppage.scenarios") }}</label>
+            <textarea v-model="formScenarios" class="form-input form-textarea"
+              :placeholder="t('grouppage.scenarios-placeholder')" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-cancel" type="button"
+            @click="showCreateModal = false; showEditModal = false; editingGroup = null">
+            {{ t("grouppage.cancel") }}
+          </button>
+          <button class="btn btn-confirm" type="button"
+            @click="showCreateModal ? createGroup() : updateGroup()">
+            {{ t("grouppage.confirm") }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div v-if="showPreviewModal" class="modal-overlay" @click.self="showPreviewModal = false">
+      <div class="modal-panel modal-preview">
+        <div class="modal-title">{{ t("grouppage.preview-title") }}</div>
+        <div class="modal-body">
+          <pre class="preview-json">{{ previewContent }}</pre>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-cancel" type="button" @click="showPreviewModal = false">
+            {{ t("grouppage.cancel") }}
+          </button>
+          <button class="btn btn-confirm" type="button" :disabled="saving" @click="doExport">
+            {{ saving ? "..." : t("grouppage.export-json") }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete -->
+    <ConfirmModal v-if="showDeleteModal" :title="t('grouppage.delete-title')"
+      :message="t('grouppage.delete-msg', { name: deletingGroup?.name })" :confirm-text="t('grouppage.delete')"
+      :danger="true" @confirm="onDeleteConfirm" @cancel="showDeleteModal = false" />
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
@@ -166,174 +334,6 @@ async function importGroup() {
   }
 }
 </script>
-
-<template>
-  <div class="group-view page-layout">
-    <!-- Header -->
-    <div class="page-header">
-      <h1 class="page-title">{{ t("grouppage.title") }}</h1>
-      <div class="header-actions">
-        <div class="header-search">
-          <svg class="search-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input v-model="searchQuery" class="search-input" type="text" :placeholder="t('grouppage.search')" />
-        </div>
-        <button class="outline-btn" type="button" :disabled="importing" @click="importGroup">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <polyline points="19 12 12 19 5 12" />
-          </svg>
-          <span>{{ importing ? "..." : t("grouppage.import") }}</span>
-        </button>
-        <button class="outline-btn" type="button" @click="goToNodes">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-            <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
-          </svg>
-          <span>{{ t("grouppage.nodes") }}</span>
-        </button>
-        <button class="add-btn" type="button" @click="openCreateModal">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          <span>{{ t("grouppage.new") }}</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Empty -->
-    <div v-if="filteredGroups.length === 0" class="empty-state">
-      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#d0d0d0" stroke-width="1.5"
-        stroke-linecap="round" stroke-linejoin="round">
-        <line x1="6" y1="3" x2="6" y2="15" />
-        <circle cx="18" cy="6" r="3" />
-        <circle cx="6" cy="18" r="3" />
-        <path d="M18 9a9 9 0 0 1-9 9" />
-      </svg>
-      <div class="empty-title">{{ t("grouppage.empty-title") }}</div>
-      <div class="empty-subtitle">{{ t("grouppage.empty-subtitle") }}</div>
-    </div>
-
-    <!-- Grid -->
-    <div v-else class="group-grid">
-      <div v-for="group in filteredGroups" :key="group.id"
-        :class="['group-card', { active: group.id === store.currentGroupId }]" @click="enterGroup(group)">
-        <div class="card-top">
-          <div class="card-icon">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <line x1="6" y1="3" x2="6" y2="15" />
-              <circle cx="18" cy="6" r="3" />
-              <circle cx="6" cy="18" r="3" />
-              <path d="M18 9a9 9 0 0 1-9 9" />
-            </svg>
-          </div>
-          <div class="card-name">{{ group.name }}</div>
-        </div>
-        <div class="card-desc">{{ group.description }}</div>
-        <div class="card-scenarios" :title="group.scenarios">
-          <span>{{ group.scenarios || t("grouppage.no-workflows") }}</span>
-        </div>
-        <div class="card-footer">
-          <div class="card-meta">
-            <span class="card-date">{{ formatDate(group.createdAt) }}</span>
-            <span class="card-count">{{ group.workflows.length }} {{ t("grouppage.workflow-count") }}</span>
-          </div>
-          <div class="card-actions">
-            <button class="card-btn" type="button" :title="t('grouppage.edit')" @click.stop="openEditModal(group)">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
-            </button>
-            <button class="card-btn" type="button" :title="t('grouppage.export')" @click.stop="openPreview(group)">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            </button>
-            <button class="card-btn card-delete" type="button" :title="t('grouppage.delete')" @click.stop="confirmDelete(group)">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Create/Edit Modal -->
-    <div v-if="showCreateModal || showEditModal" class="modal-overlay"
-      @click.self="showCreateModal = false; showEditModal = false">
-      <div class="modal-panel">
-        <div class="modal-title">
-          {{ showCreateModal ? t("grouppage.new") : t("grouppage.edit") }}
-        </div>
-        <div class="modal-body">
-          <div class="form-field">
-            <label class="form-label">{{ t("grouppage.name") }}</label>
-            <input v-model="formName" class="form-input" type="text" :placeholder="t('grouppage.name-placeholder')" />
-          </div>
-          <div class="form-field">
-            <label class="form-label">{{ t("grouppage.desc") }}</label>
-            <textarea v-model="formDesc" class="form-input form-textarea" :placeholder="t('grouppage.desc-placeholder')"
-              rows="3"></textarea>
-          </div>
-          <div class="form-field">
-            <label class="form-label">{{ t("grouppage.scenarios") }}</label>
-            <textarea v-model="formScenarios" class="form-input form-textarea"
-              :placeholder="t('grouppage.scenarios-placeholder')" rows="2"></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-cancel" type="button"
-            @click="showCreateModal = false; showEditModal = false; editingGroup = null">
-            {{ t("grouppage.cancel") }}
-          </button>
-          <button class="btn btn-confirm" type="button"
-            @click="showCreateModal ? createGroup() : updateGroup()">
-            {{ t("grouppage.confirm") }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Preview Modal -->
-    <div v-if="showPreviewModal" class="modal-overlay" @click.self="showPreviewModal = false">
-      <div class="modal-panel modal-preview">
-        <div class="modal-title">{{ t("grouppage.preview-title") }}</div>
-        <div class="modal-body">
-          <pre class="preview-json">{{ previewContent }}</pre>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-cancel" type="button" @click="showPreviewModal = false">
-            {{ t("grouppage.cancel") }}
-          </button>
-          <button class="btn btn-confirm" type="button" :disabled="saving" @click="doExport">
-            {{ saving ? "..." : t("grouppage.export-json") }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete -->
-    <ConfirmModal v-if="showDeleteModal" :title="t('grouppage.delete-title')"
-      :message="t('grouppage.delete-msg', { name: deletingGroup?.name })" :confirm-text="t('grouppage.delete')"
-      :danger="true" @confirm="onDeleteConfirm" @cancel="showDeleteModal = false" />
-  </div>
-</template>
 
 <style lang="scss" scoped>
 .group-view {

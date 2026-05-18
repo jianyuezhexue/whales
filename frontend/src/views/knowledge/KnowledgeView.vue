@@ -1,3 +1,108 @@
+<template>
+  <div class="knowledge-page page-layout">
+    <!-- Header -->
+    <div class="page-header">
+      <h1 class="page-title">{{ t("knowledgepage.title") }}</h1>
+      <div class="search-field" ref="searchRef">
+        <svg class="search-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input v-model="searchQuery" class="search-input" type="text"
+          :placeholder="t('knowledgepage.search-placeholder')" />
+
+        <div v-if="showSearchResults" class="search-overlay">
+          <div v-if="searchResults.length === 0" class="search-empty">
+            {{ t("knowledgepage.search-no-results") }}
+          </div>
+          <div v-else class="search-results-list">
+            <div v-for="result in searchResults" :key="result.file" class="result-item"
+              @click="onSearchResultClick(result)">
+              <div class="result-file">{{ result.file }}</div>
+              <div class="result-snippet">{{ result.snippet }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- No project selected -->
+    <div v-if="!hasProject" class="no-project-state">
+      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#d0d0d0" stroke-width="1.2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+      </svg>
+      <span>{{ t("knowledgepage.no-project") }}</span>
+    </div>
+
+    <!-- Two-panel body -->
+    <div v-else class="knowledge-body">
+      <!-- Left: Content area -->
+      <div class="content-panel">
+        <KnowledgeContent
+          :active-file="activeFile"
+          :file-content="fileContent"
+          :edit-content="editContent"
+          :is-editing="isEditing"
+          :is-saving="isSavingContent"
+          :is-loading="isLoadingContent"
+          :error="error"
+          @toggle-mode="toggleMode"
+          @save="saveContent"
+          @cancel-edit="cancelEdit"
+          @update-edit-content="editContent = $event"
+          @navigate-link="navigateToLink"
+        />
+      </div>
+
+      <!-- Right: Tabbed panel (Files / Schema) -->
+      <div class="right-panel">
+        <div class="right-tabs">
+          <button class="right-tab" :class="{ active: rightTab === 'files' }" @click="rightTab = 'files'">
+            {{ t("knowledgepage.file-tab") }}
+          </button>
+          <button class="right-tab" :class="{ active: rightTab === 'schema' }" @click="rightTab = 'schema'">
+            {{ t("knowledgepage.schema-tab") }}
+          </button>
+        </div>
+
+        <div class="right-content">
+          <KnowledgeFileBrowser
+            v-if="rightTab === 'files'"
+            :files="files"
+            :active-file="activeFile"
+            :is-loading="isLoadingFiles"
+            :load-directory="loadDirectory"
+            @select-file="selectFile"
+            @new-file="onNewFile"
+            @new-folder="onNewFolder"
+            @delete-file="onDeleteFile"
+          />
+
+          <KnowledgeSchema
+            v-else
+            :schemas="schemas"
+            :is-saving="isSavingSchema"
+            @save-schema="onSaveSchema"
+            @delete-schema="onDeleteSchema"
+          />
+        </div>
+      </div>
+    </div>
+
+    <ConfirmModal
+      v-if="showDeleteConfirm"
+      :title="t('knowledgepage.delete')"
+      :message="t('knowledgepage.delete-confirm')"
+      :confirm-text="t('knowledgepage.delete')"
+      :danger="true"
+      @confirm="confirmDelete"
+      @cancel="showDeleteConfirm = false"
+    />
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
@@ -328,111 +433,6 @@ function onDocumentClick(e: MouseEvent) {
   }
 }
 </script>
-
-<template>
-  <div class="knowledge-page page-layout">
-    <!-- Header -->
-    <div class="page-header">
-      <h1 class="page-title">{{ t("knowledgepage.title") }}</h1>
-      <div class="search-field" ref="searchRef">
-        <svg class="search-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input v-model="searchQuery" class="search-input" type="text"
-          :placeholder="t('knowledgepage.search-placeholder')" />
-
-        <div v-if="showSearchResults" class="search-overlay">
-          <div v-if="searchResults.length === 0" class="search-empty">
-            {{ t("knowledgepage.search-no-results") }}
-          </div>
-          <div v-else class="search-results-list">
-            <div v-for="result in searchResults" :key="result.file" class="result-item"
-              @click="onSearchResultClick(result)">
-              <div class="result-file">{{ result.file }}</div>
-              <div class="result-snippet">{{ result.snippet }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- No project selected -->
-    <div v-if="!hasProject" class="no-project-state">
-      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#d0d0d0" stroke-width="1.2"
-        stroke-linecap="round" stroke-linejoin="round">
-        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-      </svg>
-      <span>{{ t("knowledgepage.no-project") }}</span>
-    </div>
-
-    <!-- Two-panel body -->
-    <div v-else class="knowledge-body">
-      <!-- Left: Content area -->
-      <div class="content-panel">
-        <KnowledgeContent
-          :active-file="activeFile"
-          :file-content="fileContent"
-          :edit-content="editContent"
-          :is-editing="isEditing"
-          :is-saving="isSavingContent"
-          :is-loading="isLoadingContent"
-          :error="error"
-          @toggle-mode="toggleMode"
-          @save="saveContent"
-          @cancel-edit="cancelEdit"
-          @update-edit-content="editContent = $event"
-          @navigate-link="navigateToLink"
-        />
-      </div>
-
-      <!-- Right: Tabbed panel (Files / Schema) -->
-      <div class="right-panel">
-        <div class="right-tabs">
-          <button class="right-tab" :class="{ active: rightTab === 'files' }" @click="rightTab = 'files'">
-            {{ t("knowledgepage.file-tab") }}
-          </button>
-          <button class="right-tab" :class="{ active: rightTab === 'schema' }" @click="rightTab = 'schema'">
-            {{ t("knowledgepage.schema-tab") }}
-          </button>
-        </div>
-
-        <div class="right-content">
-          <KnowledgeFileBrowser
-            v-if="rightTab === 'files'"
-            :files="files"
-            :active-file="activeFile"
-            :is-loading="isLoadingFiles"
-            :load-directory="loadDirectory"
-            @select-file="selectFile"
-            @new-file="onNewFile"
-            @new-folder="onNewFolder"
-            @delete-file="onDeleteFile"
-          />
-
-          <KnowledgeSchema
-            v-else
-            :schemas="schemas"
-            :is-saving="isSavingSchema"
-            @save-schema="onSaveSchema"
-            @delete-schema="onDeleteSchema"
-          />
-        </div>
-      </div>
-    </div>
-
-    <ConfirmModal
-      v-if="showDeleteConfirm"
-      :title="t('knowledgepage.delete')"
-      :message="t('knowledgepage.delete-confirm')"
-      :confirm-text="t('knowledgepage.delete')"
-      :danger="true"
-      @confirm="confirmDelete"
-      @cancel="showDeleteConfirm = false"
-    />
-  </div>
-</template>
 
 <style lang="scss" scoped>
 .knowledge-page {

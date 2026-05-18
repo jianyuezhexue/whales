@@ -1,123 +1,3 @@
-<script setup lang="ts">
-import { ref } from "vue";
-import { useI18n } from "vue-i18n";
-import { useProjectStore } from "@/stores/project";
-import type { Project } from "@/stores/project";
-import { useWorkflowStore } from "@/stores/workflow";
-import { OpenProjectDirectory, SelectDirectory } from "../../../wailsjs/go/app/App";
-import ConfirmModal from "@/components/ConfirmModal.vue";
-
-const { t } = useI18n();
-const projectStore = useProjectStore();
-const workflowStore = useWorkflowStore();
-
-const viewMode = ref<"grid" | "list">("grid");
-const showCreateModal = ref(false);
-const showEditModal = ref(false);
-const editingProject = ref<Project | null>(null);
-const editForm = ref({ name: "", description: "", path: "", workflowGroupId: "" });
-const newProject = ref({ name: "", description: "", path: "", workflowGroupId: "" });
-const selectDirLoading = ref(false);
-const editDirLoading = ref(false);
-
-const formatDate = (timestamp: number) => {
-  const d = new Date(timestamp);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
-
-const openCreateModal = () => {
-  newProject.value = { name: "", description: "", path: "", workflowGroupId: workflowStore.currentGroupId || workflowStore.workflowGroups[0]?.id || "" };
-  showCreateModal.value = true;
-};
-
-const selectDirectory = async () => {
-  selectDirLoading.value = true;
-  try {
-    const dir = await SelectDirectory();
-    if (dir) {
-      newProject.value.path = dir;
-    }
-  } catch {
-    // user cancelled or error — ignore
-  } finally {
-    selectDirLoading.value = false;
-  }
-};
-
-const selectEditDirectory = async () => {
-  editDirLoading.value = true;
-  try {
-    const dir = await SelectDirectory();
-    if (dir) {
-      editForm.value.path = dir;
-    }
-  } catch {
-    // user cancelled or error — ignore
-  } finally {
-    editDirLoading.value = false;
-  }
-};
-
-const createProject = () => {
-  if (!newProject.value.name.trim()) return;
-  projectStore.addProject({
-    name: newProject.value.name.trim(),
-    description: newProject.value.description.trim(),
-    path: newProject.value.path.trim(),
-    workflowGroupId: newProject.value.workflowGroupId,
-  });
-  showCreateModal.value = false;
-};
-
-const showDeleteModal = ref(false);
-const deletingProject = ref<Project | null>(null);
-
-const confirmDelete = (project: Project) => {
-  deletingProject.value = project;
-  showDeleteModal.value = true;
-};
-
-const onDeleteConfirm = () => {
-  if (!deletingProject.value) return;
-  projectStore.deleteProject(deletingProject.value.id);
-  showDeleteModal.value = false;
-  deletingProject.value = null;
-};
-
-const onDeleteCancel = () => {
-  showDeleteModal.value = false;
-  deletingProject.value = null;
-};
-
-const openEditModal = (project: Project) => {
-  editingProject.value = project;
-  editForm.value = { name: project.name, description: project.description, path: project.path, workflowGroupId: project.workflowGroupId || "" };
-  showEditModal.value = true;
-};
-
-const updateProject = () => {
-  if (!editingProject.value || !editForm.value.name.trim()) return;
-  projectStore.updateProject(editingProject.value.id, {
-    name: editForm.value.name.trim(),
-    description: editForm.value.description.trim(),
-    path: editForm.value.path.trim(),
-    workflowGroupId: editForm.value.workflowGroupId,
-  });
-  showEditModal.value = false;
-};
-
-const enterProject = (project: Project) => {
-  projectStore.setCurrentProject(project.id);
-};
-
-const openProjectFolder = (project: Project) => {
-  projectStore.setCurrentProject(project.id);
-  if (project.path) {
-    OpenProjectDirectory(project.path);
-  }
-};
-</script>
-
 <template>
   <div class="project-view page-layout">
     <!-- Header -->
@@ -361,6 +241,126 @@ const openProjectFolder = (project: Project) => {
       :confirm-text="t('projectpage.delete')" :danger="true" @confirm="onDeleteConfirm" @cancel="onDeleteCancel" />
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref } from "vue";
+import { useI18n } from "vue-i18n";
+import { useProjectStore } from "@/stores/project";
+import type { Project } from "@/stores/project";
+import { useWorkflowStore } from "@/stores/workflow";
+import { OpenProjectDirectory, SelectDirectory } from "../../../wailsjs/go/app/App";
+import ConfirmModal from "@/components/ConfirmModal.vue";
+
+const { t } = useI18n();
+const projectStore = useProjectStore();
+const workflowStore = useWorkflowStore();
+
+const viewMode = ref<"grid" | "list">("grid");
+const showCreateModal = ref(false);
+const showEditModal = ref(false);
+const editingProject = ref<Project | null>(null);
+const editForm = ref({ name: "", description: "", path: "", workflowGroupId: "" });
+const newProject = ref({ name: "", description: "", path: "", workflowGroupId: "" });
+const selectDirLoading = ref(false);
+const editDirLoading = ref(false);
+
+const formatDate = (timestamp: number) => {
+  const d = new Date(timestamp);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+const openCreateModal = () => {
+  newProject.value = { name: "", description: "", path: "", workflowGroupId: workflowStore.currentGroupId || workflowStore.workflowGroups[0]?.id || "" };
+  showCreateModal.value = true;
+};
+
+const selectDirectory = async () => {
+  selectDirLoading.value = true;
+  try {
+    const dir = await SelectDirectory();
+    if (dir) {
+      newProject.value.path = dir;
+    }
+  } catch {
+    // user cancelled or error — ignore
+  } finally {
+    selectDirLoading.value = false;
+  }
+};
+
+const selectEditDirectory = async () => {
+  editDirLoading.value = true;
+  try {
+    const dir = await SelectDirectory();
+    if (dir) {
+      editForm.value.path = dir;
+    }
+  } catch {
+    // user cancelled or error — ignore
+  } finally {
+    editDirLoading.value = false;
+  }
+};
+
+const createProject = () => {
+  if (!newProject.value.name.trim()) return;
+  projectStore.addProject({
+    name: newProject.value.name.trim(),
+    description: newProject.value.description.trim(),
+    path: newProject.value.path.trim(),
+    workflowGroupId: newProject.value.workflowGroupId,
+  });
+  showCreateModal.value = false;
+};
+
+const showDeleteModal = ref(false);
+const deletingProject = ref<Project | null>(null);
+
+const confirmDelete = (project: Project) => {
+  deletingProject.value = project;
+  showDeleteModal.value = true;
+};
+
+const onDeleteConfirm = () => {
+  if (!deletingProject.value) return;
+  projectStore.deleteProject(deletingProject.value.id);
+  showDeleteModal.value = false;
+  deletingProject.value = null;
+};
+
+const onDeleteCancel = () => {
+  showDeleteModal.value = false;
+  deletingProject.value = null;
+};
+
+const openEditModal = (project: Project) => {
+  editingProject.value = project;
+  editForm.value = { name: project.name, description: project.description, path: project.path, workflowGroupId: project.workflowGroupId || "" };
+  showEditModal.value = true;
+};
+
+const updateProject = () => {
+  if (!editingProject.value || !editForm.value.name.trim()) return;
+  projectStore.updateProject(editingProject.value.id, {
+    name: editForm.value.name.trim(),
+    description: editForm.value.description.trim(),
+    path: editForm.value.path.trim(),
+    workflowGroupId: editForm.value.workflowGroupId,
+  });
+  showEditModal.value = false;
+};
+
+const enterProject = (project: Project) => {
+  projectStore.setCurrentProject(project.id);
+};
+
+const openProjectFolder = (project: Project) => {
+  projectStore.setCurrentProject(project.id);
+  if (project.path) {
+    OpenProjectDirectory(project.path);
+  }
+};
+</script>
 
 <style lang="scss" scoped>
 .page-header {

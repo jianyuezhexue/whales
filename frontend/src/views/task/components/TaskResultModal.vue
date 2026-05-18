@@ -1,59 +1,3 @@
-<script setup lang="ts">
-import { ref, computed } from "vue";
-import { useI18n } from "vue-i18n";
-import type { Task } from "@/stores/task";
-import { useTaskStore } from "@/stores/task";
-
-const props = defineProps<{
-  task: Task;
-}>();
-
-const emit = defineEmits<{
-  (e: "close"): void;
-}>();
-
-const { t } = useI18n();
-const taskStore = useTaskStore();
-
-const activeTab = ref<"process" | "result" | "collaboration">("process");
-
-const statusLabels: Record<string, string> = {
-  pending: "taskboard.status-pending",
-  running: "taskboard.status-running",
-  completed: "taskboard.status-completed",
-  failed: "taskboard.status-failed",
-};
-
-const statusColors: Record<string, string> = {
-  pending: "#9a9a9a",
-  running: "#1f1f1f",
-  completed: "#27ae60",
-  failed: "#e74c3c",
-};
-
-const children = computed(() => {
-  if (!props.task.parentId && props.task.id) {
-    return taskStore.childrenOf(props.task.id);
-  }
-  return [];
-});
-
-const hasChildren = computed(() => children.value.length > 0);
-
-type TabKey = "process" | "result" | "collaboration";
-
-const tabs = computed<{ key: TabKey; label: string }[]>(() => {
-  const list: { key: TabKey; label: string }[] = [
-    { key: "process", label: t("taskboard.execution-process") },
-    { key: "result", label: t("taskboard.execution-result") },
-  ];
-  if (hasChildren.value) {
-    list.push({ key: "collaboration", label: t("taskboard.collaboration") });
-  }
-  return list;
-});
-</script>
-
 <template>
   <div class="modal-overlay" @click.self="emit('close')">
     <div class="modal-panel">
@@ -155,6 +99,62 @@ const tabs = computed<{ key: TabKey; label: string }[]>(() => {
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { useI18n } from "vue-i18n";
+import type { Task } from "@/stores/task";
+import { useTaskStore } from "@/stores/task";
+
+const props = defineProps<{
+  task: Task;
+}>();
+
+const emit = defineEmits<{
+  (e: "close"): void;
+}>();
+
+const { t } = useI18n();
+const taskStore = useTaskStore();
+
+const activeTab = ref<"process" | "result" | "collaboration">("process");
+
+const statusLabels: Record<string, string> = {
+  pending: "taskboard.status-pending",
+  running: "taskboard.status-running",
+  completed: "taskboard.status-completed",
+  failed: "taskboard.status-failed",
+};
+
+const statusColors: Record<string, string> = {
+  pending: "#9a9a9a",
+  running: "#1f1f1f",
+  completed: "#27ae60",
+  failed: "#e74c3c",
+};
+
+const children = computed(() => {
+  if (!props.task.parentId && props.task.id) {
+    return taskStore.childrenOf(props.task.id);
+  }
+  return [];
+});
+
+const hasChildren = computed(() => children.value.length > 0);
+
+type TabKey = "process" | "result" | "collaboration";
+
+const tabs = computed<{ key: TabKey; label: string }[]>(() => {
+  const list: { key: TabKey; label: string }[] = [
+    { key: "process", label: t("taskboard.execution-process") },
+    { key: "result", label: t("taskboard.execution-result") },
+  ];
+  if (hasChildren.value) {
+    list.push({ key: "collaboration", label: t("taskboard.collaboration") });
+  }
+  return list;
+});
+</script>
 
 <style lang="scss" scoped>
 .modal-overlay {

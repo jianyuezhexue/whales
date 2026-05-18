@@ -34,11 +34,12 @@ This is a **Wails v2 desktop application** — Go backend + Vue 3 frontend commu
 - `main.go` — Wails app entry point. Binds the `App` struct to the frontend at line 56. Platform-specific options for Mac (translucent titlebar, dark appearance) and Windows.
 - `app/app.go` — The `App` struct implementing Wails lifecycle hooks (`Startup`, `DomReady`, `BeforeClose`, `Shutdown`). `Startup` initializes the PTY manager.
 - `app/*.go` — Bound methods exposed to the frontend. Each file maps to a feature area: `pty_handler.go` (terminal), `knowledge.go` (wiki files), `file.go` (native dialogs), `aui.go` (plugin management), `market.go` (stub marketplace data).
-- `internal/pty/manager.go` — PTY (pseudo-terminal) session management: start shell, write input, resize, stop, shutdown.
+- `app/compment/pty_manager.go` — PTY (pseudo-terminal) session management: start shell, write input, resize, stop, shutdown.
 - Go module name is `changeme` (never renamed from Wails template). All internal imports use `changeme/...`.
 
 **Frontend** (`frontend/src/`):
 - Vue 3 Composition API with `<script setup>` throughout.
+- **Vue SFC ordering**: Always `<template>` → `<script>` → `<style>`. This is the mandatory block order for all `.vue` files.
 - Pinia stores, Vue Router (hash-based, required by Wails), vue-i18n (zh-Hans + en).
 - xterm.js 5.x for terminal emulation, Tailwind CSS 3.x, marked for Markdown.
 - Vite 3.x build with `@/` alias pointing to `./src`.

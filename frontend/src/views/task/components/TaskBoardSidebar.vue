@@ -1,182 +1,3 @@
-<script setup lang="ts">
-import { ref, nextTick, onBeforeUnmount } from "vue";
-import { useI18n } from "vue-i18n";
-import { useTaskStore } from "@/stores/task";
-
-const vFocus = {
-  mounted(el: HTMLInputElement) {
-    el.focus();
-    el.select();
-  },
-};
-
-const emit = defineEmits<{
-  (e: "new-task"): void;
-  (e: "select", taskId: string): void;
-}>();
-
-const { t } = useI18n();
-const taskStore = useTaskStore();
-
-const statusColors: Record<string, string> = {
-  pending: "#9a9a9a",
-  running: "#1f1f1f",
-  completed: "#27ae60",
-  failed: "#e74c3c",
-};
-
-const statusLabels: Record<string, string> = {
-  pending: "taskboard.status-pending",
-  running: "taskboard.status-running",
-  completed: "taskboard.status-completed",
-  failed: "taskboard.status-failed",
-};
-
-const addingParentId = ref<string | null>(null);
-const subtaskInput = ref("");
-
-// Rename state
-const renamingId = ref<string | null>(null);
-const renameInput = ref("");
-
-// Action dropdown: fixed-position to avoid overflow clipping
-const openMenuId = ref<string | null>(null);
-const confirmDeleteId = ref<string | null>(null);
-const childConfirmDeleteId = ref<string | null>(null);
-const menuStyle = ref<Record<string, string>>({});
-
-const toggleMenu = (taskId: string, event: MouseEvent) => {
-  if (openMenuId.value === taskId) {
-    openMenuId.value = null;
-    confirmDeleteId.value = null;
-    return;
-  }
-  const btn = event.currentTarget as HTMLElement;
-  const rect = btn.getBoundingClientRect();
-  menuStyle.value = {
-    top: `${rect.bottom + 4}px`,
-    left: `${rect.right - 152}px`,
-  };
-  openMenuId.value = taskId;
-};
-
-const startAddSubtask = (parentId: string) => {
-  addingParentId.value = parentId;
-  subtaskInput.value = "";
-  openMenuId.value = null;
-};
-
-const startRename = (taskId: string) => {
-  const task = taskStore.boardTasks.find((t) => t.id === taskId);
-  if (!task) return;
-  renamingId.value = taskId;
-  renameInput.value = task.name;
-  openMenuId.value = null;
-};
-
-const confirmRename = () => {
-  const name = renameInput.value.trim();
-  if (name && renamingId.value) {
-    taskStore.updateBoardTask(renamingId.value, { name });
-  }
-  renamingId.value = null;
-  renameInput.value = "";
-};
-
-const cancelRename = () => {
-  renamingId.value = null;
-  renameInput.value = "";
-};
-
-const handleDelete = (taskId: string) => {
-  confirmDeleteId.value = taskId;
-};
-
-const cancelDelete = () => {
-  confirmDeleteId.value = null;
-  openMenuId.value = null;
-};
-
-const confirmDeleteAction = () => {
-  if (confirmDeleteId.value) {
-    taskStore.removeBoardTask(confirmDeleteId.value);
-  }
-  confirmDeleteId.value = null;
-  openMenuId.value = null;
-};
-
-const handleChildDelete = (taskId: string) => {
-  childConfirmDeleteId.value = taskId;
-};
-
-const confirmChildDelete = () => {
-  if (childConfirmDeleteId.value) {
-    taskStore.removeBoardTask(childConfirmDeleteId.value);
-  }
-  childConfirmDeleteId.value = null;
-};
-
-const cancelChildDelete = () => {
-  childConfirmDeleteId.value = null;
-};
-
-const handleBlur = () => {
-  setTimeout(() => {
-    if (addingParentId.value) {
-      const name = subtaskInput.value.trim();
-      if (name) {
-        taskStore.addSubTask(addingParentId.value, name, "user");
-      }
-      addingParentId.value = null;
-      subtaskInput.value = "";
-    }
-  }, 100);
-};
-
-const handleEnter = () => {
-  const name = subtaskInput.value.trim();
-  if (name && addingParentId.value) {
-    taskStore.addSubTask(addingParentId.value, name, "user");
-  }
-  addingParentId.value = null;
-  subtaskInput.value = "";
-};
-
-const handleEscape = () => {
-  addingParentId.value = null;
-  subtaskInput.value = "";
-};
-
-const scheduleLabel = (task: { schedule?: { enabled: boolean; mode: string; intervalValue: number; intervalUnit: string; dailyTime: string } }) => {
-  if (!task.schedule?.enabled) return "";
-  if (task.schedule.mode === "interval") {
-    const unit = task.schedule.intervalUnit === "seconds" ? t("taskboard.schedule-seconds")
-      : task.schedule.intervalUnit === "minutes" ? t("taskboard.schedule-minutes")
-      : t("taskboard.schedule-hours");
-    return `${t("taskboard.schedule-every")}${task.schedule.intervalValue}${unit}`;
-  }
-  return `${t("taskboard.schedule-at")}${task.schedule.dailyTime}`;
-};
-
-const stepLabel = (task: { id: string }) => {
-  const children = taskStore.childrenOf(task.id);
-  if (children.length === 0) return "";
-  const completed = children.filter((c) => c.status === "completed").length;
-  return `${completed}/${children.length}`;
-};
-
-// Close dropdown on outside click
-const onDocClick = (e: MouseEvent) => {
-  const target = e.target as HTMLElement;
-  if (!target.closest(".action-menu") && !target.closest(".action-btn")) {
-    openMenuId.value = null;
-    confirmDeleteId.value = null;
-  }
-};
-document.addEventListener("click", onDocClick);
-onBeforeUnmount(() => document.removeEventListener("click", onDocClick));
-</script>
-
 <template>
   <div class="board-sidebar">
     <div class="sidebar-header">
@@ -361,6 +182,185 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocClick));
     </Teleport>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref, nextTick, onBeforeUnmount } from "vue";
+import { useI18n } from "vue-i18n";
+import { useTaskStore } from "@/stores/task";
+
+const vFocus = {
+  mounted(el: HTMLInputElement) {
+    el.focus();
+    el.select();
+  },
+};
+
+const emit = defineEmits<{
+  (e: "new-task"): void;
+  (e: "select", taskId: string): void;
+}>();
+
+const { t } = useI18n();
+const taskStore = useTaskStore();
+
+const statusColors: Record<string, string> = {
+  pending: "#9a9a9a",
+  running: "#1f1f1f",
+  completed: "#27ae60",
+  failed: "#e74c3c",
+};
+
+const statusLabels: Record<string, string> = {
+  pending: "taskboard.status-pending",
+  running: "taskboard.status-running",
+  completed: "taskboard.status-completed",
+  failed: "taskboard.status-failed",
+};
+
+const addingParentId = ref<string | null>(null);
+const subtaskInput = ref("");
+
+// Rename state
+const renamingId = ref<string | null>(null);
+const renameInput = ref("");
+
+// Action dropdown: fixed-position to avoid overflow clipping
+const openMenuId = ref<string | null>(null);
+const confirmDeleteId = ref<string | null>(null);
+const childConfirmDeleteId = ref<string | null>(null);
+const menuStyle = ref<Record<string, string>>({});
+
+const toggleMenu = (taskId: string, event: MouseEvent) => {
+  if (openMenuId.value === taskId) {
+    openMenuId.value = null;
+    confirmDeleteId.value = null;
+    return;
+  }
+  const btn = event.currentTarget as HTMLElement;
+  const rect = btn.getBoundingClientRect();
+  menuStyle.value = {
+    top: `${rect.bottom + 4}px`,
+    left: `${rect.right - 152}px`,
+  };
+  openMenuId.value = taskId;
+};
+
+const startAddSubtask = (parentId: string) => {
+  addingParentId.value = parentId;
+  subtaskInput.value = "";
+  openMenuId.value = null;
+};
+
+const startRename = (taskId: string) => {
+  const task = taskStore.boardTasks.find((t) => t.id === taskId);
+  if (!task) return;
+  renamingId.value = taskId;
+  renameInput.value = task.name;
+  openMenuId.value = null;
+};
+
+const confirmRename = () => {
+  const name = renameInput.value.trim();
+  if (name && renamingId.value) {
+    taskStore.updateBoardTask(renamingId.value, { name });
+  }
+  renamingId.value = null;
+  renameInput.value = "";
+};
+
+const cancelRename = () => {
+  renamingId.value = null;
+  renameInput.value = "";
+};
+
+const handleDelete = (taskId: string) => {
+  confirmDeleteId.value = taskId;
+};
+
+const cancelDelete = () => {
+  confirmDeleteId.value = null;
+  openMenuId.value = null;
+};
+
+const confirmDeleteAction = () => {
+  if (confirmDeleteId.value) {
+    taskStore.removeBoardTask(confirmDeleteId.value);
+  }
+  confirmDeleteId.value = null;
+  openMenuId.value = null;
+};
+
+const handleChildDelete = (taskId: string) => {
+  childConfirmDeleteId.value = taskId;
+};
+
+const confirmChildDelete = () => {
+  if (childConfirmDeleteId.value) {
+    taskStore.removeBoardTask(childConfirmDeleteId.value);
+  }
+  childConfirmDeleteId.value = null;
+};
+
+const cancelChildDelete = () => {
+  childConfirmDeleteId.value = null;
+};
+
+const handleBlur = () => {
+  setTimeout(() => {
+    if (addingParentId.value) {
+      const name = subtaskInput.value.trim();
+      if (name) {
+        taskStore.addSubTask(addingParentId.value, name, "user");
+      }
+      addingParentId.value = null;
+      subtaskInput.value = "";
+    }
+  }, 100);
+};
+
+const handleEnter = () => {
+  const name = subtaskInput.value.trim();
+  if (name && addingParentId.value) {
+    taskStore.addSubTask(addingParentId.value, name, "user");
+  }
+  addingParentId.value = null;
+  subtaskInput.value = "";
+};
+
+const handleEscape = () => {
+  addingParentId.value = null;
+  subtaskInput.value = "";
+};
+
+const scheduleLabel = (task: { schedule?: { enabled: boolean; mode: string; intervalValue: number; intervalUnit: string; dailyTime: string } }) => {
+  if (!task.schedule?.enabled) return "";
+  if (task.schedule.mode === "interval") {
+    const unit = task.schedule.intervalUnit === "seconds" ? t("taskboard.schedule-seconds")
+      : task.schedule.intervalUnit === "minutes" ? t("taskboard.schedule-minutes")
+      : t("taskboard.schedule-hours");
+    return `${t("taskboard.schedule-every")}${task.schedule.intervalValue}${unit}`;
+  }
+  return `${t("taskboard.schedule-at")}${task.schedule.dailyTime}`;
+};
+
+const stepLabel = (task: { id: string }) => {
+  const children = taskStore.childrenOf(task.id);
+  if (children.length === 0) return "";
+  const completed = children.filter((c) => c.status === "completed").length;
+  return `${completed}/${children.length}`;
+};
+
+// Close dropdown on outside click
+const onDocClick = (e: MouseEvent) => {
+  const target = e.target as HTMLElement;
+  if (!target.closest(".action-menu") && !target.closest(".action-btn")) {
+    openMenuId.value = null;
+    confirmDeleteId.value = null;
+  }
+};
+document.addEventListener("click", onDocClick);
+onBeforeUnmount(() => document.removeEventListener("click", onDocClick));
+</script>
 
 <style lang="scss" scoped>
 .board-sidebar {

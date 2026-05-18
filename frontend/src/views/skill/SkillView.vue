@@ -1,5 +1,3 @@
-<script setup lang="ts"></script>
-
 <template>
   <div class="skill-page page-layout">
     <div class="page-header">
@@ -7,6 +5,8 @@
     </div>
   </div>
 </template>
+
+<script setup lang="ts"></script>
 
 <style lang="scss" scoped>
 .skill-page {

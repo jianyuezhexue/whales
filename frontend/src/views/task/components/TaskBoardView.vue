@@ -1,3 +1,20 @@
+<template>
+  <div class="board-view">
+    <TaskBoardSidebar
+      @new-task="handleNewTask"
+      @select="handleSelectTask"
+    />
+    <TaskBoardDetail />
+
+    <TaskCreateModal
+      v-if="showCreateModal"
+      ref="createModalRef"
+      @close="showCreateModal = false"
+      @confirm="handleCreateConfirm"
+    />
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
@@ -76,23 +93,6 @@ const handleSelectTask = (taskId: string) => {
   taskStore.selectedTaskId = taskId;
 };
 </script>
-
-<template>
-  <div class="board-view">
-    <TaskBoardSidebar
-      @new-task="handleNewTask"
-      @select="handleSelectTask"
-    />
-    <TaskBoardDetail />
-
-    <TaskCreateModal
-      v-if="showCreateModal"
-      ref="createModalRef"
-      @close="showCreateModal = false"
-      @confirm="handleCreateConfirm"
-    />
-  </div>
-</template>
 
 <style lang="scss" scoped>
 .board-view {

@@ -1,25 +1,3 @@
-<script setup lang="ts">
-import { ref } from "vue";
-import { useI18n } from "vue-i18n";
-
-const { t, locale, availableLocales } = useI18n();
-
-const langOpen = ref(false);
-const toggleLang = () => {
-  langOpen.value = !langOpen.value;
-};
-const selectLanguage = (lang: string) => {
-  locale.value = lang;
-  langOpen.value = false;
-};
-
-const languageLabels: Record<string, string> = {
-  "zh-Hans": "简体中文",
-  en: "English",
-  fr: "Français",
-};
-</script>
-
 <template>
   <div class="settings-view page-layout">
     <div class="page-header">
@@ -46,6 +24,28 @@ const languageLabels: Record<string, string> = {
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref } from "vue";
+import { useI18n } from "vue-i18n";
+
+const { t, locale, availableLocales } = useI18n();
+
+const langOpen = ref(false);
+const toggleLang = () => {
+  langOpen.value = !langOpen.value;
+};
+const selectLanguage = (lang: string) => {
+  locale.value = lang;
+  langOpen.value = false;
+};
+
+const languageLabels: Record<string, string> = {
+  "zh-Hans": "简体中文",
+  en: "English",
+  fr: "Français",
+};
+</script>
 
 <style lang="scss" scoped>
 .settings-view {
