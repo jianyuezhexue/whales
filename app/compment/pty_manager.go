@@ -1,4 +1,4 @@
-package pty
+package compment
 
 import (
 	"context"
@@ -20,16 +20,16 @@ type Session struct {
 	cancel context.CancelFunc
 }
 
-// Manager manages PTY sessions keyed by task ID.
-type Manager struct {
+// PtyManager manages PTY sessions keyed by task ID.
+type PtyManager struct {
 	sessions map[string]*Session
 	mu       sync.Mutex
 	ctx      context.Context
 }
 
-// NewManager creates a new PTY session manager.
-func NewManager(ctx context.Context) *Manager {
-	return &Manager{
+// NewPtyManager creates a new PTY session manager.
+func NewPtyManager(ctx context.Context) *PtyManager {
+	return &PtyManager{
 		sessions: make(map[string]*Session),
 		ctx:      ctx,
 	}
@@ -38,7 +38,7 @@ func NewManager(ctx context.Context) *Manager {
 // Start launches a command in a pseudo-terminal for the given task.
 // If initialInput is non-empty, it will be written to the PTY after a short delay.
 // If workDir is non-empty, it sets the working directory for the command.
-func (m *Manager) Start(taskID, shellCommand, initialInput, workDir string) error {
+func (m *PtyManager) Start(taskID, shellCommand, initialInput, workDir string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -79,7 +79,7 @@ func (m *Manager) Start(taskID, shellCommand, initialInput, workDir string) erro
 }
 
 // readLoop continuously reads from the PTY and emits output via Wails events.
-func (m *Manager) readLoop(taskID string, s *Session) {
+func (m *PtyManager) readLoop(taskID string, s *Session) {
 	buf := make([]byte, 4096)
 	for {
 		n, err := s.ptmx.Read(buf)
@@ -97,7 +97,7 @@ func (m *Manager) readLoop(taskID string, s *Session) {
 }
 
 // Write sends input to the PTY for the given task.
-func (m *Manager) Write(taskID, input string) error {
+func (m *PtyManager) Write(taskID, input string) error {
 	m.mu.Lock()
 	s, ok := m.sessions[taskID]
 	m.mu.Unlock()
@@ -109,7 +109,7 @@ func (m *Manager) Write(taskID, input string) error {
 }
 
 // Stop terminates the PTY session for the given task.
-func (m *Manager) Stop(taskID string) error {
+func (m *PtyManager) Stop(taskID string) error {
 	m.mu.Lock()
 	s, ok := m.sessions[taskID]
 	if ok {
@@ -125,7 +125,7 @@ func (m *Manager) Stop(taskID string) error {
 }
 
 // Resize changes the terminal window size for the given task.
-func (m *Manager) Resize(taskID string, cols, rows int) error {
+func (m *PtyManager) Resize(taskID string, cols, rows int) error {
 	m.mu.Lock()
 	s, ok := m.sessions[taskID]
 	m.mu.Unlock()
@@ -139,7 +139,7 @@ func (m *Manager) Resize(taskID string, cols, rows int) error {
 }
 
 // Shutdown stops all active sessions. Called on app shutdown.
-func (m *Manager) Shutdown() {
+func (m *PtyManager) Shutdown() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for id, s := range m.sessions {

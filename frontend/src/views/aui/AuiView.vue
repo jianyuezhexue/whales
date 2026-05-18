@@ -52,7 +52,7 @@ const previewPlugin = ref<AuiPluginMeta | null>(null)
 const showPreviewModal = ref(false)
 const previewJsonStr = ref("")
 const previewJsonError = ref(false)
-const previewMode = ref<'data' | 'render'>('data')
+const previewMode = ref<'data' | 'render'>('render')
 const previewContainerRef = ref<HTMLElement | null>(null)
 let previewElement: HTMLElement | null = null
 
@@ -60,7 +60,7 @@ function openPreview(plugin: AuiPluginMeta) {
   previewPlugin.value = plugin
   previewJsonStr.value = JSON.stringify(plugin.sampleData, null, 2)
   previewJsonError.value = false
-  previewMode.value = 'data'
+  previewMode.value = 'render'
   showPreviewModal.value = true
 }
 
@@ -271,16 +271,6 @@ const showCreateModal = ref(false)
           <div class="preview-title">{{ previewPlugin.icon }} {{ previewPlugin.name }} <span class="preview-version">v{{ previewPlugin.version }}</span></div>
           <div class="preview-toggle">
             <button
-              :class="['preview-toggle-btn', { active: previewMode === 'data' }]"
-              title="JSON 数据"
-              @click="previewMode = 'data'"
-            >
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="16 18 22 12 16 6" />
-                <polyline points="8 6 2 12 8 18" />
-              </svg>
-            </button>
-            <button
               :class="['preview-toggle-btn', { active: previewMode === 'render' }]"
               title="渲染效果"
               @click="previewMode = 'render'"
@@ -288,6 +278,16 @@ const showCreateModal = ref(false)
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                 <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+            <button
+              :class="['preview-toggle-btn', { active: previewMode === 'data' }]"
+              title="JSON 数据"
+              @click="previewMode = 'data'"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
               </svg>
             </button>
           </div>

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"changeme/internal/pty"
+	"changeme/app/compment"
 
 	"path/filepath"
 )
@@ -14,7 +14,7 @@ import (
 type App struct {
 	ctx        context.Context
 	starCount  int
-	ptyManager *pty.Manager
+	ptyManager *compment.PtyManager
 }
 
 // NewApp creates a new App application struct
@@ -25,7 +25,7 @@ func NewApp() *App {
 // Startup is called at application startup
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
-	a.ptyManager = pty.NewManager(ctx)
+	a.ptyManager = compment.NewPtyManager(ctx)
 }
 
 // DomReady is called after the front-end dom has been loaded
