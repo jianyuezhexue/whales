@@ -31,6 +31,25 @@
 
     <!-- Tab: Installed Plugins -->
     <div v-show="activeTab === 'installed'" class="tab-content">
+      <!-- Built-in Components -->
+      <div class="section-label">内置组件</div>
+      <div class="plugin-grid builtin-grid">
+        <div v-for="comp in BUILTIN_COMPONENTS" :key="comp.id" class="plugin-card builtin-card">
+          <div class="plugin-icon">{{ comp.icon }}</div>
+          <div class="plugin-body">
+            <div class="card-head">
+              <div class="plugin-name">{{ comp.name }}</div>
+              <div class="head-actions">
+                <button class="btn-sm btn-preview" @click="openBuiltinPreview(comp)">预览</button>
+                <span class="builtin-badge">内置</span>
+              </div>
+            </div>
+            <div class="plugin-desc">{{ comp.description }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top: 24px;">已安装插件</div>
       <div v-if="pluginStore.installedPlugins.length === 0" class="empty-state">
         <div class="empty-icon">🧩</div>
         <div class="empty-title">暂无已安装插件</div>
@@ -114,10 +133,13 @@
     </div>
 
     <!-- Preview Modal -->
-    <div v-if="showPreviewModal && previewPlugin" class="modal-overlay" @click.self="showPreviewModal = false">
+    <div v-if="showPreviewModal && (previewPlugin || previewBuiltin)" class="modal-overlay" @click.self="showPreviewModal = false">
       <div class="preview-panel">
         <div class="preview-header">
-          <div class="preview-title">{{ previewPlugin.icon }} {{ previewPlugin.name }} <span class="preview-version">v{{ previewPlugin.version }}</span></div>
+          <div class="preview-title">
+            <template v-if="previewPlugin">{{ previewPlugin.icon }} {{ previewPlugin.name }} <span class="preview-version">v{{ previewPlugin.version }}</span></template>
+            <template v-if="previewBuiltin">{{ previewBuiltin.icon }} {{ previewBuiltin.name }} <span class="preview-version builtin-tag">内置</span></template>
+          </div>
           <div class="preview-toggle">
             <button
               :class="['preview-toggle-btn', { active: previewMode === 'render' }]"
@@ -164,7 +186,10 @@
           </div>
           <!-- Render preview (full page) -->
           <div v-show="previewMode === 'render'" class="preview-render-full">
-            <div class="preview-render-area" ref="previewContainerRef"></div>
+            <div v-if="isPreviewBuiltin && previewAuiInstance" class="preview-render-area">
+              <AuiRenderer :aui="previewAuiInstance" :data="previewBuiltin!.sampleData" />
+            </div>
+            <div v-else class="preview-render-area" ref="previewContainerRef"></div>
           </div>
         </div>
       </div>
@@ -176,9 +201,11 @@
 
 <script setup lang="ts">
 import { onMounted, ref, computed, nextTick, watch } from "vue"
-import { useAuiPluginStore } from "@/stores/auiPlugin"
-import type { AuiPluginMeta } from "@/stores/auiPlugin"
+import { useAuiPluginStore, BUILTIN_COMPONENTS } from "@/stores/auiPlugin"
+import type { AuiPluginMeta, BuiltinComponent } from "@/stores/auiPlugin"
 import CreateAuiModal from "@/components/aui/CreateAuiModal.vue"
+import AuiRenderer from "@/components/aui/AuiRenderer.vue"
+import type { AuiInstance } from "@/types/aui"
 
 const pluginStore = useAuiPluginStore()
 
@@ -225,6 +252,7 @@ const filteredMarketPlugins = computed(() => {
 
 // ── Plugin preview ──────────────────────────────────────
 const previewPlugin = ref<AuiPluginMeta | null>(null)
+const previewBuiltin = ref<BuiltinComponent | null>(null)
 const showPreviewModal = ref(false)
 const previewJsonStr = ref("")
 const previewJsonError = ref(false)
@@ -232,9 +260,37 @@ const previewMode = ref<'data' | 'render'>('render')
 const previewContainerRef = ref<HTMLElement | null>(null)
 let previewElement: HTMLElement | null = null
 
+const isPreviewBuiltin = computed(() => !!previewBuiltin.value)
+
+const previewAuiInstance = computed<AuiInstance | null>(() => {
+  if (!previewBuiltin.value) return null
+  return {
+    id: "",
+    name: previewBuiltin.value.name,
+    description: previewBuiltin.value.description,
+    rendererType: previewBuiltin.value.id,
+    fields: [],
+    jsonSchema: {},
+    sampleData: previewBuiltin.value.sampleData,
+    aiPrompt: "",
+    createdAt: "",
+    updatedAt: "",
+  }
+})
+
 function openPreview(plugin: AuiPluginMeta) {
   previewPlugin.value = plugin
+  previewBuiltin.value = null
   previewJsonStr.value = JSON.stringify(plugin.sampleData, null, 2)
+  previewJsonError.value = false
+  previewMode.value = 'render'
+  showPreviewModal.value = true
+}
+
+function openBuiltinPreview(component: BuiltinComponent) {
+  previewBuiltin.value = component
+  previewPlugin.value = null
+  previewJsonStr.value = JSON.stringify(component.sampleData, null, 2)
   previewJsonError.value = false
   previewMode.value = 'render'
   showPreviewModal.value = true
@@ -303,15 +359,18 @@ function updatePreviewData(data: any) {
 
 watch(showPreviewModal, (val) => {
   if (val) {
-    nextTick(mountPreviewElement)
+    if (!previewBuiltin.value) {
+      nextTick(mountPreviewElement)
+    }
   } else {
     previewPlugin.value = null
+    previewBuiltin.value = null
     previewElement = null
   }
 })
 
 watch(previewMode, (mode) => {
-  if (mode === 'render' && showPreviewModal.value) {
+  if (mode === 'render' && showPreviewModal.value && !previewBuiltin.value) {
     nextTick(mountPreviewElement)
   }
 })
@@ -573,6 +632,24 @@ const showCreateModal = ref(false)
   color: #6366f1;
 }
 
+// ── Section label ───────────────────────────────────────
+.section-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a4a4a;
+  margin-bottom: 12px;
+}
+
+// ── Builtin badge ───────────────────────────────────────
+.builtin-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: #fef3c7;
+  color: #d97706;
+  font-weight: 500;
+}
+
 .plugin-downloads {
   background: #f0f8f0;
   color: #10b981;
@@ -639,6 +716,11 @@ const showCreateModal = ref(false)
   color: #6b6b6b;
   margin-left: 6px;
   vertical-align: middle;
+
+  &.builtin-tag {
+    background: #fef3c7;
+    color: #d97706;
+  }
 }
 
 .preview-close {

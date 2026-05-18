@@ -67,9 +67,10 @@ export const AUI_REF_PREFIX = {
 
 // Built-in renderers that can be selected as node output
 export const BUILTIN_AUI_OPTIONS: WorkflowNodeAui[] = [
-  { id: "builtin:table", name: "数据表格", color: "#6366f1" },
+  { id: "builtin:html-viewer", name: "HTML预览", color: "#e67e22" },
+  { id: "builtin:image-viewer", name: "图片浏览", color: "#3498db" },
+  { id: "builtin:video-viewer", name: "视频播放", color: "#9b59b6" },
   { id: "builtin:browser-preview", name: "浏览器预览", color: "#0ea5e9" },
-  { id: "builtin:todo", name: "任务代办", color: "#14b8a6" },
 ];
 
 // ============ Constants ============

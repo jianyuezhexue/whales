@@ -25,7 +25,9 @@ class AuiGantt extends HTMLElement {
       return;
     }
 
-    const dates = tasks.flatMap((t) => [t.startDate, t.endDate].map((d) => new Date(d)));
+    const dates = tasks.flatMap((t) =>
+      [t.startDate, t.endDate].map((d) => new Date(d))
+    );
     const minDate = new Date(Math.min(...dates));
     const maxDate = new Date(Math.max(...dates));
     const totalDays = Math.max((maxDate - minDate) / (1000 * 60 * 60 * 24), 1);
@@ -47,7 +49,10 @@ class AuiGantt extends HTMLElement {
         const color = t.color || this.defaultColor(i);
         return { ...t, leftPct, widthPct, progress, color, index: i };
       })
-      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+      .sort(
+        (a, b) =>
+          new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+      );
 
     const sidebarWidth = 160;
     const barAreaLeft = sidebarWidth + 1;
@@ -58,7 +63,12 @@ class AuiGantt extends HTMLElement {
         <div class="gantt-header">
           <div class="gantt-header-sidebar">任务</div>
           <div class="gantt-header-timeline">
-            ${months.map((m) => `<div class="gantt-month" style="flex:${m.days}">${m.label}</div>`).join("")}
+            ${months
+              .map(
+                (m) =>
+                  `<div class="gantt-month" style="flex:${m.days}">${m.label}</div>`
+              )
+              .join("")}
           </div>
         </div>
         <div class="gantt-body">
@@ -67,14 +77,26 @@ class AuiGantt extends HTMLElement {
               .map(
                 (t) => `
               <div class="gantt-row">
-                <div class="gantt-row-label" style="width:${sidebarWidth}px" title="${t.title}">
+                <div class="gantt-row-label" style="width:${sidebarWidth}px" title="${
+                  t.title
+                }">
                   <span class="gantt-dot" style="background:${t.color}"></span>
                   ${t.title}
                 </div>
                 <div class="gantt-row-bars" style="left:${barAreaLeft}px">
-                  ${showTodayLine ? `<div class="gantt-today-line" style="left:${(todayOffset / totalDays) * 100}%"></div>` : ""}
-                  <div class="gantt-bar" style="left:${t.leftPct}%;width:${t.widthPct}%;background:${t.color}">
-                    <div class="gantt-bar-fill" style="width:${t.progress}%;background:${this.darken(t.color, 0.2)}"></div>
+                  ${
+                    showTodayLine
+                      ? `<div class="gantt-today-line" style="left:${
+                          (todayOffset / totalDays) * 100
+                        }%"></div>`
+                      : ""
+                  }
+                  <div class="gantt-bar" style="left:${t.leftPct}%;width:${
+                  t.widthPct
+                }%;background:${t.color}">
+                    <div class="gantt-bar-fill" style="width:${
+                      t.progress
+                    }%;background:${this.darken(t.color, 0.2)}"></div>
                   </div>
                 </div>
               </div>`
@@ -83,7 +105,12 @@ class AuiGantt extends HTMLElement {
           </div>
         </div>
         <div class="gantt-legend">
-          ${rows.map((t) => `<div class="gantt-legend-item"><span class="gantt-dot" style="background:${t.color}"></span>${t.title} (${t.progress}%)</div>`).join("")}
+          ${rows
+            .map(
+              (t) =>
+                `<div class="gantt-legend-item"><span class="gantt-dot" style="background:${t.color}"></span>${t.title} (${t.progress}%)</div>`
+            )
+            .join("")}
         </div>
       </div>`;
   }
@@ -92,7 +119,9 @@ class AuiGantt extends HTMLElement {
     const months = [];
     const cursor = new Date(min.getFullYear(), min.getMonth(), 1);
     while (cursor <= max) {
-      const label = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+      const label = `${cursor.getFullYear()}-${String(
+        cursor.getMonth() + 1
+      ).padStart(2, "0")}`;
       const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
       const rangeStart = cursor > min ? cursor : min;
       const rangeEnd = monthEnd < max ? monthEnd : max;
@@ -107,7 +136,15 @@ class AuiGantt extends HTMLElement {
   }
 
   defaultColor(i) {
-    const colors = ["#6366f1", "#8b5cf6", "#0ea5e9", "#14b8a6", "#f59e0b", "#ef4444", "#ec4899"];
+    const colors = [
+      "#6366f1",
+      "#8b5cf6",
+      "#0ea5e9",
+      "#14b8a6",
+      "#f59e0b",
+      "#ef4444",
+      "#ec4899",
+    ];
     return colors[i % colors.length];
   }
 

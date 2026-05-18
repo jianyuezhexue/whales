@@ -5,6 +5,9 @@ import { useAuiPluginStore } from "@/stores/auiPlugin"
 import TableRenderer from "./renderers/TableRenderer.vue"
 import BrowserPreviewRenderer from "./renderers/BrowserPreviewRenderer.vue"
 import TodoRenderer from "./renderers/TodoRenderer.vue"
+import HtmlViewer from "./renderers/HtmlViewer.vue"
+import ImageViewer from "./renderers/ImageViewer.vue"
+import VideoViewer from "./renderers/VideoViewer.vue"
 
 const props = defineProps<{
   aui: AuiInstance
@@ -22,7 +25,7 @@ const isPluginReady = ref(false)
 const pluginErrorMessage = ref<string | null>(null)
 const renderData = computed(() => props.data ?? props.aui.sampleData)
 
-const BUILTIN_RENDERERS = new Set(["table", "browser-preview", "todo"])
+const BUILTIN_RENDERERS = new Set(["table", "browser-preview", "todo", "html-viewer", "image-viewer", "video-viewer"])
 
 const isPluginRenderer = computed(() => !BUILTIN_RENDERERS.has(props.aui.rendererType))
 
@@ -34,6 +37,12 @@ const rendererComponent = computed(() => {
       return BrowserPreviewRenderer
     case "todo":
       return TodoRenderer
+    case "html-viewer":
+      return HtmlViewer
+    case "image-viewer":
+      return ImageViewer
+    case "video-viewer":
+      return VideoViewer
     default:
       return null
   }

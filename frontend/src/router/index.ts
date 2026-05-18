@@ -14,11 +14,6 @@ const router = createRouter({
       component: () => import("../views/workflow/WorkflowGroupView.vue"),
     },
     {
-      path: "/workflow/nodes",
-      name: "workflow-nodes",
-      component: () => import("../views/workflow/WorkflowNodeLibView.vue"),
-    },
-    {
       path: "/workflow/:groupId",
       name: "workflow-detail",
       component: () => import("../views/workflow/WorkflowView.vue"),

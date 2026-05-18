@@ -18,8 +18,40 @@ export function ExportFile(arg1, arg2) {
   return window['go']['app']['App']['ExportFile'](arg1, arg2);
 }
 
+export function FetchLocalSkills(arg1) {
+  return window['go']['app']['App']['FetchLocalSkills'](arg1);
+}
+
 export function FetchMarketPlugins() {
   return window['go']['app']['App']['FetchMarketPlugins']();
+}
+
+export function FetchMcpMarket(arg1, arg2, arg3) {
+  return window['go']['app']['App']['FetchMcpMarket'](arg1, arg2, arg3);
+}
+
+export function FetchMcpMarketWithCookies(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['app']['App']['FetchMcpMarketWithCookies'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function FetchSkillCollectionInfo(arg1) {
+  return window['go']['app']['App']['FetchSkillCollectionInfo'](arg1);
+}
+
+export function FetchSkillFileContent(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['FetchSkillFileContent'](arg1, arg2, arg3, arg4);
+}
+
+export function FetchSkillFiles(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['FetchSkillFiles'](arg1, arg2, arg3, arg4);
+}
+
+export function FetchSkillReadme(arg1, arg2) {
+  return window['go']['app']['App']['FetchSkillReadme'](arg1, arg2);
+}
+
+export function FetchSkillsMarket(arg1, arg2, arg3) {
+  return window['go']['app']['App']['FetchSkillsMarket'](arg1, arg2, arg3);
 }
 
 export function ImportFile() {
@@ -28,6 +60,10 @@ export function ImportFile() {
 
 export function InstallAuiPlugin(arg1, arg2, arg3) {
   return window['go']['app']['App']['InstallAuiPlugin'](arg1, arg2, arg3);
+}
+
+export function ListAuiOutputDir(arg1, arg2) {
+  return window['go']['app']['App']['ListAuiOutputDir'](arg1, arg2);
 }
 
 export function ListAuiPlugins(arg1) {
@@ -60,6 +96,10 @@ export function PtyStop(arg1) {
 
 export function PtyWrite(arg1, arg2) {
   return window['go']['app']['App']['PtyWrite'](arg1, arg2);
+}
+
+export function ReadAuiOutputFile(arg1, arg2) {
+  return window['go']['app']['App']['ReadAuiOutputFile'](arg1, arg2);
 }
 
 export function ReadKnowledgeFile(arg1, arg2) {

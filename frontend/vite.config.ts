@@ -38,6 +38,20 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  server: {
+    proxy: {
+      "/api/skills": {
+        target: "https://www.modelscope.cn",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/skills/, "/api/v1/dolphin/skills"),
+      },
+      "/api/mcp": {
+        target: "https://www.modelscope.cn",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/mcp/, "/api/v1/dolphin/mcpServers"),
+      },
+    },
+  },
   build: {
     rollupOptions: {
       output: {

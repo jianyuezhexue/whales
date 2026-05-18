@@ -10,11 +10,29 @@ export function EnsureKnowledgeDirs(arg1:string):Promise<void>;
 
 export function ExportFile(arg1:string,arg2:string):Promise<string>;
 
+export function FetchLocalSkills(arg1:string):Promise<Array<app.LocalSkillInfo>>;
+
 export function FetchMarketPlugins():Promise<Array<app.MarketPlugin>>;
+
+export function FetchMcpMarket(arg1:number,arg2:number,arg3:string):Promise<string>;
+
+export function FetchMcpMarketWithCookies(arg1:number,arg2:number,arg3:string,arg4:string,arg5:string):Promise<string>;
+
+export function FetchSkillCollectionInfo(arg1:string):Promise<string>;
+
+export function FetchSkillFileContent(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
+export function FetchSkillFiles(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
+export function FetchSkillReadme(arg1:string,arg2:string):Promise<string>;
+
+export function FetchSkillsMarket(arg1:number,arg2:number,arg3:string):Promise<string>;
 
 export function ImportFile():Promise<string>;
 
 export function InstallAuiPlugin(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function ListAuiOutputDir(arg1:string,arg2:string):Promise<Array<app.AuiOutputFileInfo>>;
 
 export function ListAuiPlugins(arg1:string):Promise<Array<app.AuiPluginMeta>>;
 
@@ -31,6 +49,8 @@ export function PtyStart(arg1:string,arg2:string,arg3:string,arg4:string):Promis
 export function PtyStop(arg1:string):Promise<void>;
 
 export function PtyWrite(arg1:string,arg2:string):Promise<void>;
+
+export function ReadAuiOutputFile(arg1:string,arg2:string):Promise<app.AuiOutputFileResult>;
 
 export function ReadKnowledgeFile(arg1:string,arg2:string):Promise<string>;
 

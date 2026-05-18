@@ -1,8 +1,10 @@
 package app
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"mime"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,6 +30,19 @@ type AuiPluginMeta struct {
 type AuiPluginAssets struct {
 	JS  string `json:"js"`
 	CSS string `json:"css"`
+}
+
+// AuiOutputFileResult holds file content and MIME type for output file reading
+type AuiOutputFileResult struct {
+	Content  string `json:"content"`  // base64 encoded file content
+	MimeType string `json:"mimeType"` // detected MIME type
+}
+
+// AuiOutputFileInfo describes a file in an output directory
+type AuiOutputFileInfo struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+	Size int64  `json:"size"`
 }
 
 // pluginsDir returns the path to the aui-plugins directory
@@ -126,4 +141,60 @@ func (a *App) UninstallAuiPlugin(projectPath string, pluginId string) error {
 		return fmt.Errorf("failed to uninstall plugin %s: %w", pluginId, err)
 	}
 	return nil
+}
+
+// ReadAuiOutputFile reads a file from the project directory and returns its content as base64
+func (a *App) ReadAuiOutputFile(projectPath string, relativePath string) (*AuiOutputFileResult, error) {
+	// Validate path to prevent traversal
+	relativePath = filepath.Clean(relativePath)
+	if strings.HasPrefix(relativePath, "..") || filepath.IsAbs(relativePath) {
+		return nil, fmt.Errorf("invalid path: %s", relativePath)
+	}
+	fullPath := filepath.Join(projectPath, relativePath)
+
+	data, err := os.ReadFile(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %w", relativePath, err)
+	}
+
+	mimeType := mime.TypeByExtension(filepath.Ext(fullPath))
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+
+	return &AuiOutputFileResult{
+		Content:  base64.StdEncoding.EncodeToString(data),
+		MimeType: mimeType,
+	}, nil
+}
+
+// ListAuiOutputDir lists files in a directory within the project
+func (a *App) ListAuiOutputDir(projectPath string, relativePath string) ([]AuiOutputFileInfo, error) {
+	relativePath = filepath.Clean(relativePath)
+	if strings.HasPrefix(relativePath, "..") || filepath.IsAbs(relativePath) {
+		return nil, fmt.Errorf("invalid path: %s", relativePath)
+	}
+	fullPath := filepath.Join(projectPath, relativePath)
+
+	entries, err := os.ReadDir(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read directory %s: %w", relativePath, err)
+	}
+
+	var files []AuiOutputFileInfo
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		files = append(files, AuiOutputFileInfo{
+			Name: entry.Name(),
+			Path: filepath.Join(relativePath, entry.Name()),
+			Size: info.Size(),
+		})
+	}
+	return files, nil
 }

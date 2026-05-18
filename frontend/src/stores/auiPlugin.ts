@@ -24,6 +24,103 @@ export interface MarketPlugin extends AuiPluginMeta {
   screenshot: string
 }
 
+export interface BuiltinComponent {
+  id: string
+  name: string
+  description: string
+  icon: string
+  sampleData: any
+}
+
+const sampleHtmlPage = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>项目周报</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f7fa;color:#1f2937;padding:32px;line-height:1.6}
+.card{background:#fff;border-radius:10px;padding:24px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+h1{font-size:22px;margin-bottom:8px}h2{font-size:16px;color:#6366f1;margin-bottom:12px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+.stat{padding:20px;border-radius:8px;text-align:center}.stat-value{font-size:28px;font-weight:700}
+.stat-label{font-size:12px;color:#6b7280;margin-top:4px}
+.stat-green{background:#ecfdf5}.stat-green .stat-value{color:#10b981}
+.stat-blue{background:#eff6ff}.stat-blue .stat-value{color:#3b82f6}
+.stat-amber{background:#fffbeb}.stat-amber .stat-value{color:#d97706}
+.task-list{list-style:none}.task-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6}
+.task-status{font-size:11px;padding:2px 8px;border-radius:10px}
+.status-done{background:#ecfdf5;color:#10b981}.status-progress{background:#eff6ff;color:#3b82f6}.status-todo{background:#f9fafb;color:#9ca3af}
+.badge{display:inline-block;font-size:11px;padding:3px 10px;border-radius:12px;margin-right:6px;background:#f3f4f6;color:#6b7280}
+</style></head>
+<body>
+<h1>📊 项目周报 — 第23周</h1>
+<div class="stats">
+<div class="stat stat-green"><div class="stat-value">12</div><div class="stat-label">已完成任务</div></div>
+<div class="stat stat-blue"><div class="stat-value">5</div><div class="stat-label">进行中</div></div>
+<div class="stat stat-amber"><div class="stat-value">3</div><div class="stat-label">待处理</div></div>
+</div>
+<div class="card">
+<h2>📋 本周关键任务</h2>
+<ul class="task-list">
+<li class="task-item"><span>🔐 用户认证模块重构</span><span class="task-status status-done">已完成</span></li>
+<li class="task-item"><span>📱 移动端适配优化</span><span class="task-status status-done">已完成</span></li>
+<li class="task-item"><span>⚡ API性能优化</span><span class="task-status status-progress">进行中</span></li>
+<li class="task-item"><span>📝 技术文档更新</span><span class="task-status status-todo">待开始</span></li>
+</ul>
+</div>
+<div class="card">
+<h2>🏷 里程碑</h2>
+<span class="badge">v2.3 已发布</span><span class="badge">v2.4 规划中</span><span class="badge">Q3 目标确认</span>
+</div>
+</body></html>`
+
+export const BUILTIN_COMPONENTS: BuiltinComponent[] = [
+  {
+    id: "html-viewer",
+    name: "HTML预览",
+    description: "渲染本地HTML文件，支持自包含HTML页面的完整预览",
+    icon: "📄",
+    sampleData: {
+      path: ".whales/output/report.html",
+      inlineHtml: sampleHtmlPage,
+    },
+  },
+  {
+    id: "image-viewer",
+    name: "图片浏览",
+    description: "加载本地图片文件夹，以网格图库方式浏览，支持灯箱放大查看",
+    icon: "🖼️",
+    sampleData: {
+      path: ".whales/output/images/",
+      demoImages: [
+        "https://picsum.photos/seed/aui1/400/400",
+        "https://picsum.photos/seed/aui2/400/300",
+        "https://picsum.photos/seed/aui3/300/400",
+        "https://picsum.photos/seed/aui4/400/400",
+        "https://picsum.photos/seed/aui5/400/300",
+        "https://picsum.photos/seed/aui6/300/400",
+        "https://picsum.photos/seed/aui7/400/400",
+        "https://picsum.photos/seed/aui8/400/300",
+      ],
+    },
+  },
+  {
+    id: "video-viewer",
+    name: "视频播放",
+    description: "播放本地视频文件，内置播放控制器",
+    icon: "▶️",
+    sampleData: {
+      path: ".whales/output/demo.mp4",
+      description: "可用于播放任务生成的演示视频、录屏、产品介绍等视频内容",
+    },
+  },
+  {
+    id: "browser-preview",
+    name: "浏览器预览",
+    description: "在嵌入式浏览器中预览URL链接或HTML页面",
+    icon: "🌐",
+    sampleData: { url: "https://example.com", title: "Example" },
+  },
+]
+
 // Dynamically import Wails bindings
 let wailsApp: typeof import("../../wailsjs/go/app/App") | null = null
 

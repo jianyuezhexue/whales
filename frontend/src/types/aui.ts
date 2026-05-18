@@ -17,6 +17,9 @@ export interface AuiField {
 export type AuiRendererType = string
 
 export const BUILTIN_RENDERER_OPTIONS: { value: string; label: string; labelEn: string }[] = [
+  { value: "html-viewer", label: "HTML预览", labelEn: "HTML Preview" },
+  { value: "image-viewer", label: "图片浏览", labelEn: "Image Viewer" },
+  { value: "video-viewer", label: "视频播放", labelEn: "Video Player" },
   { value: "table", label: "数据表格", labelEn: "Data Table" },
   { value: "browser-preview", label: "浏览器预览", labelEn: "Browser Preview" },
   { value: "todo", label: "任务代办", labelEn: "Task Todo" },
@@ -102,6 +105,39 @@ export function generateJsonSchema(fields: AuiField[], rendererType: AuiRenderer
     }
   }
 
+  // html-viewer: expects { path: string }
+  if (rendererType === "html-viewer") {
+    return {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "HTML文件路径" },
+      },
+      required: ["path"],
+    }
+  }
+
+  // image-viewer: expects { path: string } (folder path)
+  if (rendererType === "image-viewer") {
+    return {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "图片文件夹路径" },
+      },
+      required: ["path"],
+    }
+  }
+
+  // video-viewer: expects { path: string }
+  if (rendererType === "video-viewer") {
+    return {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "视频文件路径" },
+      },
+      required: ["path"],
+    }
+  }
+
   // browser-preview: expects { url: string, title?: string }
   if (rendererType === "browser-preview") {
     return {
@@ -161,6 +197,18 @@ export function generateSampleData(fields: AuiField[], rendererType: AuiRenderer
       { id: "2", title: "编写技术方案", done: false, ...sampleRow },
       { id: "3", title: "代码实现", done: false, ...sampleRow },
     ]
+  }
+
+  if (rendererType === "html-viewer") {
+    return { path: ".whales/output/report.html" }
+  }
+
+  if (rendererType === "image-viewer") {
+    return { path: ".whales/output/images/" }
+  }
+
+  if (rendererType === "video-viewer") {
+    return { path: ".whales/output/demo.mp4" }
   }
 
   if (rendererType === "browser-preview") {

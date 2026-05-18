@@ -1,5 +1,35 @@
 export namespace app {
 	
+	export class AuiOutputFileInfo {
+	    name: string;
+	    path: string;
+	    size: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new AuiOutputFileInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.size = source["size"];
+	    }
+	}
+	export class AuiOutputFileResult {
+	    content: string;
+	    mimeType: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AuiOutputFileResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.content = source["content"];
+	        this.mimeType = source["mimeType"];
+	    }
+	}
 	export class AuiPluginAssets {
 	    js: string;
 	    css: string;
@@ -66,6 +96,24 @@ export namespace app {
 	        this.isDir = source["isDir"];
 	        this.size = source["size"];
 	        this.modTime = source["modTime"];
+	    }
+	}
+	export class LocalSkillInfo {
+	    id: string;
+	    name: string;
+	    description: string;
+	    path: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LocalSkillInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.path = source["path"];
 	    }
 	}
 	export class MarketPlugin {
