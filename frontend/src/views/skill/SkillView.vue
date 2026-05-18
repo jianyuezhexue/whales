@@ -31,6 +31,11 @@
           type="text"
           :placeholder="t('skillpage.search-placeholder')"
         />
+        <button v-if="searchQuery" class="skill-search-clear" type="button" @click="searchQuery = ''">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -55,7 +60,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
-import { FetchLocalSkills } from "../../../wailsjs/go/app/App"
+import { FetchLocalSkills, FetchSkillsMarket } from "../../../wailsjs/go/app/App"
 import { useProjectStore } from "@/stores/project"
 
 import InstalledSkills from "./components/InstalledSkills.vue"
@@ -78,12 +83,52 @@ const installedIds = ref<string[]>([])
 const installedMarketSkills = ref<Map<string, any>>(new Map())
 const searchQuery = ref("")
 
+function parseMarketItem(item: any) {
+  const isTopCollection = item.Skill != null || item.Collection != null
+  if (isTopCollection) {
+    const isSkill = !!item.Skill
+    const s = item.Skill ?? item.Collection ?? {}
+    const id = isSkill
+      ? (s.Path && s.Name ? `${s.Path}/${s.Name}` : (s.Name || s.Fid || ""))
+      : (s.Fid ?? "")
+    const name = isSkill
+      ? (s.DisplayName || s.Name || `Skill-${id}`)
+      : (s.Name || `Collection-${id}`)
+    return { id, name, description: s.Description ?? "", color: hashColor(id), type: isSkill ? "Skill" : "Collection", _raw: item }
+  } else {
+    const id = item.Path && item.Name ? `${item.Path}/${item.Name}` : (item.Name || "")
+    const name = item.DisplayName || item.Name || id
+    return { id, name, description: item.Description ?? "", color: hashColor(id), type: "Skill", _raw: { Skill: item } }
+  }
+}
+
 onMounted(async () => {
   const projectPath = projectStore.currentProject?.path
   if (!projectPath) return
   try {
     const localSkills = await FetchLocalSkills(projectPath)
     for (const skill of localSkills) {
+      try {
+        const jsonStr = await FetchSkillsMarket(5, 1, skill.name)
+        const json = typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr
+        const data = json?.Data ?? {}
+        const items = data.SkillList ?? data.SkillCollection ?? []
+        const match = items.find((item: any) => {
+          const s = item.Skill ?? item
+          return s.Name === skill.id || s.DisplayName === skill.name
+        })
+        if (match) {
+          const parsed = parseMarketItem(match)
+          if (!installedIds.value.includes(parsed.id)) {
+            installedIds.value.push(parsed.id)
+            installedMarketSkills.value.set(parsed.id, parsed)
+          }
+          continue
+        }
+      } catch {
+        // Market lookup failed, fall through to local data
+      }
+      // Fallback: use local data with market-compatible structure
       if (!installedIds.value.includes(skill.id)) {
         installedIds.value.push(skill.id)
         installedMarketSkills.value.set(skill.id, {
@@ -91,7 +136,7 @@ onMounted(async () => {
           name: skill.name,
           description: skill.description || "",
           color: hashColor(skill.id),
-          type: "BuiltIn",
+          type: "Skill",
           _raw: {
             Skill: {
               Name: skill.id,
@@ -190,7 +235,7 @@ function onInstallSkill(skill: any) {
 .skill-search-input {
   width: 180px;
   height: 28px;
-  padding: 0 8px 0 28px;
+  padding: 0 24px 0 28px;
   border: 1px solid #e5e5e5;
   border-radius: 6px;
   background: #ffffff;
@@ -203,6 +248,30 @@ function onInstallSkill(skill: any) {
 
   &:focus { border-color: #b0b0b0; }
   &::placeholder { color: #c0c0c0; }
+}
+
+.skill-search-clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: #9a9a9a;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 50%;
+  transition: color 0.15s, background-color 0.15s;
+
+  &:hover {
+    color: #1f1f1f;
+    background-color: #f0f0f0;
+  }
 }
 
 .skill-content {

@@ -162,25 +162,32 @@ async function fetchSkills() {
   try {
     const jsonStr = await FetchSkillsMarket(pageSize, pageNumber.value, props.searchQuery)
     const json = typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr
-    const items = json?.Data?.SkillCollection ?? []
-    totalCount.value = json?.Data?.TotalCount ?? 0
+    const data = json?.Data ?? {}
+    // API returns different keys depending on WithTopCollection:
+    //   WithTopCollection=true  → SkillCollection: [{IsTop, Skill/Collection, Type}]
+    //   WithTopCollection=false → SkillList: [{Name, DisplayName, Description, ...}]
+    const isTopCollection = data.SkillCollection != null
+    const items = isTopCollection
+      ? (data.SkillCollection ?? [])
+      : (data.SkillList ?? [])
+    totalCount.value = data.TotalCount ?? 0
     skills.value = items.map((item: any) => {
-      const isSkill = !!item.Skill
-      const s = item.Skill ?? item.Collection ?? {}
-      const id = isSkill
-        ? (s.Path && s.Name ? `${s.Path}/${s.Name}` : (s.Name || s.Fid || ""))
-        : (s.Fid ?? "")
-      const name = isSkill
-        ? (s.DisplayName || s.Name || `Skill-${id}`)
-        : (s.Name || `Collection-${id}`)
-      const desc = isSkill ? (s.Description ?? "") : (s.Description ?? "")
-      return {
-        id,
-        name,
-        description: desc,
-        color: getColor(id),
-        type: isSkill ? "Skill" : "Collection",
-        _raw: item,
+      if (isTopCollection) {
+        const isSkill = !!item.Skill
+        const s = item.Skill ?? item.Collection ?? {}
+        const id = isSkill
+          ? (s.Path && s.Name ? `${s.Path}/${s.Name}` : (s.Name || s.Fid || ""))
+          : (s.Fid ?? "")
+        const name = isSkill
+          ? (s.DisplayName || s.Name || `Skill-${id}`)
+          : (s.Name || `Collection-${id}`)
+        const desc = s.Description ?? ""
+        return { id, name, description: desc, color: getColor(id), type: isSkill ? "Skill" : "Collection", _raw: item }
+      } else {
+        const id = item.Path && item.Name ? `${item.Path}/${item.Name}` : (item.Name || "")
+        const name = item.DisplayName || item.Name || id
+        const desc = item.Description ?? ""
+        return { id, name, description: desc, color: getColor(id), type: "Skill", _raw: { Skill: item } }
       }
     })
   } catch (e) {

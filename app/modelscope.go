@@ -43,7 +43,7 @@ func (a *App) FetchSkillsMarket(pageSize int, pageNumber int, query string) (str
 		"Query":            query,
 		"Sort":             "Default",
 		"Criterion":        []string{},
-		"WithTopCollection": true,
+		"WithTopCollection": query == "",
 	}
 	return modelscopeRequest("PUT", "https://www.modelscope.cn/api/v1/dolphin/skills", body)
 }
@@ -147,6 +147,10 @@ func urlPathEscape(s string) string {
 }
 
 func modelscopeRequest(method, urlStr string, body map[string]interface{}) (string, error) {
+	return doModelscopeRequest(http.DefaultClient, method, urlStr, body)
+}
+
+func doModelscopeRequest(client *http.Client, method, urlStr string, body map[string]interface{}) (string, error) {
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
 		return "", fmt.Errorf("marshal body: %w", err)
@@ -158,7 +162,7 @@ func modelscopeRequest(method, urlStr string, body map[string]interface{}) (stri
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("request failed: %w", err)
 	}

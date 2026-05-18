@@ -33,13 +33,24 @@ func (a *App) FetchLocalSkills(projectPath string) ([]LocalSkillInfo, error) {
 
 	var skills []LocalSkillInfo
 	for _, entry := range entries {
-		if entry.IsDir() {
-			info := readLocalSkillDir(filepath.Join(skillDir, entry.Name()), entry.Name())
+		fullPath := filepath.Join(skillDir, entry.Name())
+		// Follow symlinks: os.ReadDir does not follow symlinks, so we need
+		// to stat the resolved path to determine if it points to a directory.
+		resolved, err := filepath.EvalSymlinks(fullPath)
+		if err != nil {
+			continue
+		}
+		fi, err := os.Stat(resolved)
+		if err != nil {
+			continue
+		}
+		if fi.IsDir() {
+			info := readLocalSkillDir(resolved, entry.Name())
 			if info != nil {
 				skills = append(skills, *info)
 			}
 		} else if strings.HasSuffix(entry.Name(), ".skill") {
-			info := readLocalSkillZip(filepath.Join(skillDir, entry.Name()), strings.TrimSuffix(entry.Name(), ".skill"))
+			info := readLocalSkillZip(resolved, strings.TrimSuffix(entry.Name(), ".skill"))
 			if info != nil {
 				skills = append(skills, *info)
 			}

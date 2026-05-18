@@ -1,6 +1,6 @@
 <template>
   <div class="installed-skills">
-    <div v-if="filteredSkills.length === 0" class="skills-empty">
+    <div v-if="filteredSkills.length === 0" class="market-empty">
       <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#d0d0d0" stroke-width="1.2"
         stroke-linecap="round" stroke-linejoin="round">
         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
@@ -8,20 +8,20 @@
       <span>{{ t('skillpage.installed-empty') }}</span>
     </div>
 
-    <div v-else class="skills-grid">
-      <div v-for="skill in filteredSkills" :key="skill.id" class="skill-card">
-        <div class="skill-card-header">
-          <span class="skill-color-dot" :style="{ backgroundColor: skill.color }"></span>
-          <span class="skill-name">{{ skill.name }}</span>
+    <div v-else class="market-grid">
+      <div v-for="skill in filteredSkills" :key="skill.id" class="market-card">
+        <div class="market-card-header">
+          <span class="market-color-dot" :style="{ backgroundColor: skill.color }"></span>
+          <span class="market-name">{{ skill.name }}</span>
         </div>
-        <div class="skill-card-body">
-          <p class="skill-desc">{{ skill.description || '—' }}</p>
+        <div class="market-card-body">
+          <p class="market-desc">{{ skill.description || '—' }}</p>
         </div>
-        <div class="skill-card-footer">
-          <button class="skill-action-btn skill-detail-btn" type="button" @click="openDetail(skill)">
+        <div class="market-card-footer">
+          <button class="market-action-btn market-detail-btn" type="button" @click="openDetail(skill)">
             {{ t('skillpage.detail') }}
           </button>
-          <button class="skill-action-btn skill-uninstall-btn" type="button" @click="$emit('uninstall', skill.id)">
+          <button class="market-action-btn market-uninstall-btn" type="button" @click="$emit('uninstall', skill.id)">
             {{ t('skillpage.uninstall') }}
           </button>
         </div>
@@ -40,7 +40,6 @@
 import { ref, computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { ALL_SKILLS } from "@/stores/workflow"
-import type { WorkflowNodeSkill } from "@/stores/workflow"
 import SkillDetailModal from "./SkillDetailModal.vue"
 import type { SkillDetailData } from "./SkillDetailModal.vue"
 
@@ -138,7 +137,7 @@ function closeDetail() {
   gap: 16px;
 }
 
-.skills-empty {
+.market-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -149,13 +148,13 @@ function closeDetail() {
   font-size: 14px;
 }
 
-.skills-grid {
+.market-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 12px;
 }
 
-.skill-card {
+.market-card {
   display: flex;
   flex-direction: column;
   padding: 16px;
@@ -170,21 +169,21 @@ function closeDetail() {
   }
 }
 
-.skill-card-header {
+.market-card-header {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 10px;
 }
 
-.skill-color-dot {
+.market-color-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.skill-name {
+.market-name {
   flex: 1;
   font-size: 14px;
   font-weight: 600;
@@ -195,25 +194,29 @@ function closeDetail() {
   white-space: nowrap;
 }
 
-.skill-card-body {
+.market-card-body {
   flex: 1;
   margin-bottom: 12px;
 }
 
-.skill-desc {
+.market-desc {
   font-size: 12px;
   color: #6b6b6b;
   line-height: 1.5;
   margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.skill-card-footer {
+.market-card-footer {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  justify-content: space-between;
 }
 
-.skill-action-btn {
+.market-action-btn {
   height: 28px;
   padding: 0 14px;
   border-radius: 6px;
@@ -223,10 +226,11 @@ function closeDetail() {
   transition: all 0.15s;
 }
 
-.skill-detail-btn {
+.market-detail-btn {
   border: 1px solid #e5e5e5;
   background: #ffffff;
   color: #6b6b6b;
+  margin-right: auto;
 
   &:hover {
     border-color: #1f1f1f;
@@ -234,7 +238,7 @@ function closeDetail() {
   }
 }
 
-.skill-uninstall-btn {
+.market-uninstall-btn {
   border: none;
   background: #1f1f1f;
   color: #ffffff;

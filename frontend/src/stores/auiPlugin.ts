@@ -105,11 +105,14 @@ export const BUILTIN_COMPONENTS: BuiltinComponent[] = [
   {
     id: "video-viewer",
     name: "视频播放",
-    description: "播放本地视频文件，内置播放控制器",
+    description: "加载本地视频文件夹，以网格方式浏览，支持灯箱放大播放",
     icon: "▶️",
     sampleData: {
-      path: ".whales/output/demo.mp4",
-      description: "可用于播放任务生成的演示视频、录屏、产品介绍等视频内容",
+      path: ".whales/output/videos/",
+      demoVideos: [
+        "/demo-videos/sample1.mp4",
+        "/demo-videos/sample2.mp4",
+      ],
     },
   },
   {
